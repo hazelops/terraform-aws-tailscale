@@ -18,11 +18,36 @@ Security scanning is graciously provided by Bridgecrew.
 
 ## To deploy this module: 
 
-  1. Create [Tailscale authorization key](https://tailscale.com/kb/1085/auth-keys)
-  2. Create AWS SSM Parameter using obtained Tailscale authorization key. For example, use the following path pattern: `<env-name>/global/tailscale_auth_key`. For more information please refer to [AWS manual](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-create-console.html).
-  3. Add data source to Terraform code like in the [example configuration main.tf file](./examples/minimum/main.tf).
-  4. In the module call parameters, set `tailscale_auth_key` variable like in the [example configuration main.tf file](./examples/minimum/main.tf).
-  5. Alternatively Tailscale authorization key could be set as string, but this is very unsafe, therefore it is **_highly not recommended_** to do this.
+  1. Create [Tailscale API access token](https://tailscale.com/kb/1252/key-secret-management#api-access-tokens)
+  2. Add tag to the [ACL control list](https://login.tailscale.com/admin/acls/file). ACL should look like this:
+  ```json
+  {
+  "acls": [
+    {
+      "action": "accept",
+      "ports": [
+        "*:*",
+      ],
+      "users": [
+        "*",
+      ],
+    },
+  ],
+  "tagOwners": {
+    "tag:server": [],
+  },
+}
+  ```
+ **_The tag must be added to the ACL to disable automatic key expiration!_** 
+ 
+  Default parameter for tag is `tag:server`.
+ 
+  You could found more examples in [Tailscale manual](https://tailscale.com/kb/1068/acl-tags#defining-a-tag).
+
+  3. Create AWS SSM Parameter using obtained Tailscale API access token. For example, use the following path pattern: `<env-name>/global/tailscale_api_token`. For more information please refer to [AWS manual](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-create-console.html).
+  4. Add data source to Terraform code like in the [example configuration main.tf file](./examples/minimum/main.tf).
+  5. In the module call parameters, set `tailscale_api_token` variable like in the [example configuration main.tf file](./examples/minimum/main.tf).
+  6. Alternatively Tailscale API token could be set as string, but this is very unsafe, therefore it is **_highly not recommended_** to do this.
 
 ## Requirements
 
@@ -31,6 +56,7 @@ Security scanning is graciously provided by Bridgecrew.
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >=1.2.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >=4.30.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | ~> 1.2 |
+| <a name="requirement_tailscale"></a> [tailscale](#requirement\_tailscale) | 0.13.13 |
 | <a name="requirement_template"></a> [template](#requirement\_template) | >=2.2 |
 
 ## Providers
@@ -38,6 +64,7 @@ Security scanning is graciously provided by Bridgecrew.
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >=4.30.0 |
+| <a name="provider_tailscale"></a> [tailscale](#provider\_tailscale) | 0.13.13 |
 | <a name="provider_template"></a> [template](#provider\_template) | >=2.2 |
 
 ## Modules
@@ -54,6 +81,7 @@ No modules.
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_launch_template.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/launch_template) | resource |
 | [aws_security_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [tailscale_tailnet_key.this](https://registry.terraform.io/providers/tailscale/tailscale/0.13.13/docs/resources/tailnet_key) | resource |
 | [aws_ami.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_iam_policy_document.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [template_file.ec2_user_data](https://registry.terraform.io/providers/hashicorp/template/latest/docs/data-sources/file) | data source |
@@ -74,7 +102,9 @@ No modules.
 | <a name="input_public_ip_enabled"></a> [public\_ip\_enabled](#input\_public\_ip\_enabled) | Enable Public IP for Tailscale instance | `bool` | `false` | no |
 | <a name="input_ssm_role_arn"></a> [ssm\_role\_arn](#input\_ssm\_role\_arn) | SSM role to attach to a Tailscale instance | `string` | `"arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"` | no |
 | <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security. | `list(string)` | n/a | yes |
-| <a name="input_tailscale_auth_key"></a> [tailscale\_auth\_key](#input\_tailscale\_auth\_key) | Set Tailscale authorization key here. To create Tailscale authorization key, please visit: https://tailscale.com/kb/1085/auth-keys | `string` | n/a | yes |
+| <a name="input_tailscale_api_token"></a> [tailscale\_api\_token](#input\_tailscale\_api\_token) | Set Tailscale API access token here | `string` | n/a | yes |
+| <a name="input_tailscale_key_expiry"></a> [tailscale\_key\_expiry](#input\_tailscale\_key\_expiry) | The expiry of the key in seconds. Defaults to 7776000 (90 days) | `string` | `7776000` | no |
+| <a name="input_tailscale_tags"></a> [tailscale\_tags](#input\_tailscale\_tags) | A device is automatically tagged when it is authenticated with this key | `list(string)` | <pre>[<br>  "tag:server"<br>]</pre> | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | n/a | `string` | n/a | yes |
 
 ## Outputs

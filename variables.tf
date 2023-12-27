@@ -10,7 +10,7 @@ variable "ec2_key_pair_name" {
 }
 
 variable "subnets" {
-  type = list(string)
+  type        = list(string)
   description = "Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security."
 }
 
@@ -24,11 +24,6 @@ variable "name" {
   type        = string
   default     = "tailscale-router"
   description = "Set a name for Tailscale instance"
-}
-
-variable "tailscale_auth_key" {
-  type        = string
-  description = "Set Tailscale authorization key here. To create Tailscale authorization key, please visit: https://tailscale.com/kb/1085/auth-keys"
 }
 
 variable "instance_type" {
@@ -72,6 +67,23 @@ variable "monitoring_enabled" {
   type        = bool
   default     = true
   description = "Enable monitoring for the Auto Scaling Group"
+}
+
+variable "tailscale_api_token" {
+  type        = string
+  description = "Set Tailscale API access token here"
+}
+
+variable "tailscale_key_expiry" {
+  type        = string
+  default     = 7776000
+  description = "The expiry of the key in seconds. Defaults to 7776000 (90 days)"
+}
+
+variable "tailscale_tags" {
+  type        = list(string)
+  default     = ["tag:server"]
+  description = "A device is automatically tagged when it is authenticated with this key"
 }
 
 locals {
