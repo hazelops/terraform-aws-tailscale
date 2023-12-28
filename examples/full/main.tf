@@ -13,20 +13,23 @@ data "aws_ssm_parameter" "tailscale_api_token" {
 }
 
 module "tailscale" {
-  source               = "registry.terraform.io/hazelops/tailscale/aws"
-  version              = "~>0.2"
-  name                 = "tailscale-instance"
-  allowed_cidr_blocks  = [var.vpc_cidr_block]
-  ec2_key_pair_name    = var.aws_key_name
-  env                  = var.env
-  subnets              = var.subnets
-  vpc_id               = var.vpc_id
-  public_ip_enabled    = true
-  ami_id               = "ami-0e1c5d8c23330dee3"
-  instance_type        = "t3.micro"
-  tailscale_api_token  = data.aws_ssm_parameter.tailscale_api_token.value # Please don't store secrets in plain text
-  monitoring_enabled   = true
-  ext_security_groups  = []
-  tailscale_tags       = ["tag:server"]
-  tailscale_key_expiry = 7776000
+  source                      = "registry.terraform.io/hazelops/tailscale/aws"
+  version                     = "~>0.2"
+  name                        = "tailscale-instance"
+  allowed_cidr_blocks         = [var.vpc_cidr_block]
+  ec2_key_pair_name           = var.aws_key_name
+  env                         = var.env
+  subnets                     = var.subnets
+  vpc_id                      = var.vpc_id
+  public_ip_enabled           = true
+  ami_id                      = "ami-0e1c5d8c23330dee3"
+  instance_type               = "t3.micro"
+  tailscale_api_token         = data.aws_ssm_parameter.tailscale_api_token.value # Please don't store secrets in plain text
+  monitoring_enabled          = true
+  ext_security_groups         = []
+  tags                        = ["tag:server"]
+  tailscale_key_expiry        = 7776000
+  tailscale_key_reusable      = true
+  tailscale_key_ephemeral     = true
+  tailscale_key_preauthorized = true
 }

@@ -69,23 +69,42 @@ variable "monitoring_enabled" {
   description = "Enable monitoring for the Auto Scaling Group"
 }
 
-variable "tailscale_api_token" {
+variable "api_token" {
   type        = string
   description = "Set Tailscale API access token here"
 }
 
 variable "tailscale_key_expiry" {
-  type        = string
+  type        = number
   default     = 7776000
   description = "The expiry of the key in seconds. Defaults to 7776000 (90 days)"
 }
 
-variable "tailscale_tags" {
+variable "tailscale_key_reusable" {
+  type        = bool
+  default     = true
+  description = "Indicates if the key is reusable or single-use"
+}
+
+variable "tailscale_key_ephemeral" {
+  type        = bool
+  default     = true
+  description = "Indicates if the key is ephemeral"
+}
+
+variable "tailscale_key_preauthorized" {
+  type        = bool
+  default     = true
+  description = "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default"
+}
+
+variable "tags" {
   type        = list(string)
-  default     = ["tag:server"]
+  default     = []
   description = "A device is automatically tagged when it is authenticated with this key"
 }
 
 locals {
   name = "${var.env}-${var.name}"
+  tags = concat(["tag:${var.env}"], var.tags)
 }

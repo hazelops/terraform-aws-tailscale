@@ -34,7 +34,7 @@ Security scanning is graciously provided by Bridgecrew.
     },
   ],
   "tagOwners": {
-    "tag:server": [],
+    "tag:<your-environment>": [],
   },
 }
   ```
@@ -48,6 +48,31 @@ Security scanning is graciously provided by Bridgecrew.
   4. Add data source to Terraform code like in the [example configuration main.tf file](./examples/minimum/main.tf).
   5. In the module call parameters, set `tailscale_api_token` variable like in the [example configuration main.tf file](./examples/minimum/main.tf).
   6. Alternatively Tailscale API token could be set as string, but this is very unsafe, therefore it is **_highly not recommended_** to do this.
+
+
+
+## Possible problems on module destroy:
+
+The following error may occur during module removal:
+```text
+Error: Provider configuration not present
+
+To work with module.tailscale.tailscale_tailnet_key.this (orphan) its
+original provider configuration at
+module.tailscale.provider["registry.terraform.io/tailscale/tailscale"] is
+required, but it has been removed. This occurs when a provider
+configuration is removed while objects created by that provider still exist
+in the state. Re-add the provider configuration to destroy
+module.tailscale.tailscale_tailnet_key.this (orphan), after which you can
+remove the provider configuration again.
+```
+
+To remove it, run the following code:
+
+```shell
+terraform state rm module.tailscale.tailscale_tailnet_key.this
+```
+
 
 ## Requirements
 
@@ -92,6 +117,7 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | List of network subnets that are allowed. According to PCI-DSS, CIS AWS and SOC2 providing a default wide-open CIDR is not secure. | `list(string)` | n/a | yes |
 | <a name="input_ami_id"></a> [ami\_id](#input\_ami\_id) | Optional AMI ID for Tailscale instance. Otherwise latest Amazon Linux will be used. | `string` | `""` | no |
+| <a name="input_api_token"></a> [api\_token](#input\_api\_token) | Set Tailscale API access token here | `string` | n/a | yes |
 | <a name="input_asg"></a> [asg](#input\_asg) | Scaling settings of an Auto Scaling Group | `map` | <pre>{<br>  "max_size": 1,<br>  "min_size": 1<br>}</pre> | no |
 | <a name="input_ec2_key_pair_name"></a> [ec2\_key\_pair\_name](#input\_ec2\_key\_pair\_name) | n/a | `string` | n/a | yes |
 | <a name="input_env"></a> [env](#input\_env) | n/a | `string` | n/a | yes |
@@ -102,9 +128,11 @@ No modules.
 | <a name="input_public_ip_enabled"></a> [public\_ip\_enabled](#input\_public\_ip\_enabled) | Enable Public IP for Tailscale instance | `bool` | `false` | no |
 | <a name="input_ssm_role_arn"></a> [ssm\_role\_arn](#input\_ssm\_role\_arn) | SSM role to attach to a Tailscale instance | `string` | `"arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"` | no |
 | <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security. | `list(string)` | n/a | yes |
-| <a name="input_tailscale_api_token"></a> [tailscale\_api\_token](#input\_tailscale\_api\_token) | Set Tailscale API access token here | `string` | n/a | yes |
-| <a name="input_tailscale_key_expiry"></a> [tailscale\_key\_expiry](#input\_tailscale\_key\_expiry) | The expiry of the key in seconds. Defaults to 7776000 (90 days) | `string` | `7776000` | no |
-| <a name="input_tailscale_tags"></a> [tailscale\_tags](#input\_tailscale\_tags) | A device is automatically tagged when it is authenticated with this key | `list(string)` | <pre>[<br>  "tag:server"<br>]</pre> | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | A device is automatically tagged when it is authenticated with this key | `list(string)` | `[]` | no |
+| <a name="input_tailscale_key_ephemeral"></a> [tailscale\_key\_ephemeral](#input\_tailscale\_key\_ephemeral) | Indicates if the key is ephemeral | `bool` | `true` | no |
+| <a name="input_tailscale_key_expiry"></a> [tailscale\_key\_expiry](#input\_tailscale\_key\_expiry) | The expiry of the key in seconds. Defaults to 7776000 (90 days) | `number` | `7776000` | no |
+| <a name="input_tailscale_key_preauthorized"></a> [tailscale\_key\_preauthorized](#input\_tailscale\_key\_preauthorized) | Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default | `bool` | `true` | no |
+| <a name="input_tailscale_key_reusable"></a> [tailscale\_key\_reusable](#input\_tailscale\_key\_reusable) | Indicates if the key is reusable or single-use | `bool` | `true` | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | n/a | `string` | n/a | yes |
 
 ## Outputs

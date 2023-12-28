@@ -1,3 +1,3 @@
 provider "tailscale" {
-  api_key = var.tailscale_api_token
+  api_key = var.api_token
 }
