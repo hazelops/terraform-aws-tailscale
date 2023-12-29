@@ -3,9 +3,9 @@ data "template_file" "ec2_user_data" {
   template = file("${path.module}/ec2_user_data.yml.tpl")
 
   vars = {
-    tailscale_auth_key         = var.tailscale_auth_key
-    tailscale_advertise_routes = join(",", var.allowed_cidr_blocks)
-    hostname                   = local.name
+    auth_key         = tailscale_tailnet_key.this.key
+    advertise_routes = join(",", var.allowed_cidr_blocks)
+    hostname         = local.name
   }
 }
 

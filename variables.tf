@@ -10,7 +10,7 @@ variable "ec2_key_pair_name" {
 }
 
 variable "subnets" {
-  type = list(string)
+  type        = list(string)
   description = "Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security."
 }
 
@@ -24,11 +24,6 @@ variable "name" {
   type        = string
   default     = "tailscale-router"
   description = "Set a name for Tailscale instance"
-}
-
-variable "tailscale_auth_key" {
-  type        = string
-  description = "Set Tailscale authorization key here. To create Tailscale authorization key, please visit: https://tailscale.com/kb/1085/auth-keys"
 }
 
 variable "instance_type" {
@@ -74,6 +69,42 @@ variable "monitoring_enabled" {
   description = "Enable monitoring for the Auto Scaling Group"
 }
 
+variable "api_token" {
+  type        = string
+  description = "Set Tailscale API access token here"
+}
+
+variable "key_expiry" {
+  type        = number
+  default     = 7776000
+  description = "The expiry of the key in seconds. Defaults to 7776000 (90 days)"
+}
+
+variable "key_reusable" {
+  type        = bool
+  default     = true
+  description = "Indicates if the key is reusable or single-use"
+}
+
+variable "key_ephemeral" {
+  type        = bool
+  default     = true
+  description = "Indicates if the key is ephemeral"
+}
+
+variable "key_preauthorized" {
+  type        = bool
+  default     = true
+  description = "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default"
+}
+
+variable "tags" {
+  type        = list(string)
+  default     = []
+  description = "A device is automatically tagged when it is authenticated with this key"
+}
+
 locals {
   name = "${var.env}-${var.name}"
+  tags = concat(["tag:${var.env}"], var.tags)
 }

@@ -18,4 +18,4 @@ write_files:
 runcmd:
   - sysctl -p /etc/sysctl.conf
   - systemctl enable --now tailscaled
-  - tailscale up --authkey "${tailscale_auth_key}" --advertise-routes "${tailscale_advertise_routes}" --hostname "${hostname}"
+  - tailscale up --authkey "${auth_key}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"

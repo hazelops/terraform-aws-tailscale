@@ -12,6 +12,10 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 1.2"
     }
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "0.13.13"
+    }
   }
   required_version = ">=1.2.0"
 }
