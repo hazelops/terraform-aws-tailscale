@@ -20,5 +20,5 @@ module "tailscale" {
   env                 = var.env
   subnets             = var.subnets
   vpc_id              = var.vpc_id
-  tailscale_api_token = data.aws_ssm_parameter.tailscale_api_token.value # Please don't store secrets in plain text
+  api_token           = data.aws_ssm_parameter.tailscale_api_token.value # Please don't store secrets in plain text
 }

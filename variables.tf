@@ -74,25 +74,25 @@ variable "api_token" {
   description = "Set Tailscale API access token here"
 }
 
-variable "tailscale_key_expiry" {
+variable "key_expiry" {
   type        = number
   default     = 7776000
   description = "The expiry of the key in seconds. Defaults to 7776000 (90 days)"
 }
 
-variable "tailscale_key_reusable" {
+variable "key_reusable" {
   type        = bool
   default     = true
   description = "Indicates if the key is reusable or single-use"
 }
 
-variable "tailscale_key_ephemeral" {
+variable "key_ephemeral" {
   type        = bool
   default     = true
   description = "Indicates if the key is ephemeral"
 }
 
-variable "tailscale_key_preauthorized" {
+variable "key_preauthorized" {
   type        = bool
   default     = true
   description = "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default"

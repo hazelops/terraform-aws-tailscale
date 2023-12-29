@@ -40,13 +40,13 @@ Security scanning is graciously provided by Bridgecrew.
   ```
  **_The tag must be added to the ACL to disable automatic key expiration!_** 
  
-  Default parameter for tag is `tag:server`.
+  Default parameter for tag is `tag:<your-environment>`.
  
   You could found more examples in [Tailscale manual](https://tailscale.com/kb/1068/acl-tags#defining-a-tag).
 
   3. Create AWS SSM Parameter using obtained Tailscale API access token. For example, use the following path pattern: `<env-name>/global/tailscale_api_token`. For more information please refer to [AWS manual](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-create-console.html).
   4. Add data source to Terraform code like in the [example configuration main.tf file](./examples/minimum/main.tf).
-  5. In the module call parameters, set `tailscale_api_token` variable like in the [example configuration main.tf file](./examples/minimum/main.tf).
+  5. In the module call parameters, set `api_token` variable like in the [example configuration main.tf file](./examples/minimum/main.tf).
   6. Alternatively Tailscale API token could be set as string, but this is very unsafe, therefore it is **_highly not recommended_** to do this.
 
 
@@ -123,16 +123,16 @@ No modules.
 | <a name="input_env"></a> [env](#input\_env) | n/a | `string` | n/a | yes |
 | <a name="input_ext_security_groups"></a> [ext\_security\_groups](#input\_ext\_security\_groups) | External security groups to add to the Tailscale instance | `list(any)` | `[]` | no |
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | Set type of Tailscale instance | `string` | `"t3.nano"` | no |
+| <a name="input_key_ephemeral"></a> [key\_ephemeral](#input\_key\_ephemeral) | Indicates if the key is ephemeral | `bool` | `true` | no |
+| <a name="input_key_expiry"></a> [key\_expiry](#input\_key\_expiry) | The expiry of the key in seconds. Defaults to 7776000 (90 days) | `number` | `7776000` | no |
+| <a name="input_key_preauthorized"></a> [key\_preauthorized](#input\_key\_preauthorized) | Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default | `bool` | `true` | no |
+| <a name="input_key_reusable"></a> [key\_reusable](#input\_key\_reusable) | Indicates if the key is reusable or single-use | `bool` | `true` | no |
 | <a name="input_monitoring_enabled"></a> [monitoring\_enabled](#input\_monitoring\_enabled) | Enable monitoring for the Auto Scaling Group | `bool` | `true` | no |
 | <a name="input_name"></a> [name](#input\_name) | Set a name for Tailscale instance | `string` | `"tailscale-router"` | no |
 | <a name="input_public_ip_enabled"></a> [public\_ip\_enabled](#input\_public\_ip\_enabled) | Enable Public IP for Tailscale instance | `bool` | `false` | no |
 | <a name="input_ssm_role_arn"></a> [ssm\_role\_arn](#input\_ssm\_role\_arn) | SSM role to attach to a Tailscale instance | `string` | `"arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"` | no |
 | <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security. | `list(string)` | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | A device is automatically tagged when it is authenticated with this key | `list(string)` | `[]` | no |
-| <a name="input_tailscale_key_ephemeral"></a> [tailscale\_key\_ephemeral](#input\_tailscale\_key\_ephemeral) | Indicates if the key is ephemeral | `bool` | `true` | no |
-| <a name="input_tailscale_key_expiry"></a> [tailscale\_key\_expiry](#input\_tailscale\_key\_expiry) | The expiry of the key in seconds. Defaults to 7776000 (90 days) | `number` | `7776000` | no |
-| <a name="input_tailscale_key_preauthorized"></a> [tailscale\_key\_preauthorized](#input\_tailscale\_key\_preauthorized) | Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default | `bool` | `true` | no |
-| <a name="input_tailscale_key_reusable"></a> [tailscale\_key\_reusable](#input\_tailscale\_key\_reusable) | Indicates if the key is reusable or single-use | `bool` | `true` | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | n/a | `string` | n/a | yes |
 
 ## Outputs
