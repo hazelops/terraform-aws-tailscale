@@ -24,6 +24,7 @@ resource "aws_launch_template" "this" {
   instance_type                        = var.instance_type
   key_name                             = var.ec2_key_pair_name
   user_data                            = base64encode(data.template_file.ec2_user_data.rendered)
+  update_default_version               = true
   monitoring {
     enabled = var.monitoring_enabled
   }
