@@ -3,10 +3,12 @@
 This module is used to deploy a [Tailscale](https://tailscale.com) router instance to set up access from VPC to the
 Tailscale Cloud.
 
-Module logic is the following:  
+Module logic is the following:
+1. Connect to TailScale API using the Terraform Provider and Tailscale api token.
+2. Generate TailScale Auth Key and place it into the instance.
+3. Create an Autoscale Group with a single instance using and connect it to the TailScale network.
 
 ## Usage
-
 _Please refer to [Tailscale Configuration](#tailscale-configuration) first_
 
 ```terraform
