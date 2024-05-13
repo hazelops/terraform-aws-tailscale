@@ -1,6 +1,6 @@
 # Generate userdata for Tailscale instance
 data "template_file" "ec2_user_data" {
-  template = file("${path.module}/ec2_user_data.yml.tpl")
+  template = file("${path.module}/templates/ec2_user_data.tpl.yml")
 
   vars = {
     auth_key         = tailscale_tailnet_key.this.key
@@ -9,9 +9,8 @@ data "template_file" "ec2_user_data" {
   }
 }
 
-# Download latest AMI info for Amazon Linux 2023
+# Get latest AMI info for Amazon Linux 2023
 data "aws_ami" "this" {
-
   most_recent = true
 
   filter {

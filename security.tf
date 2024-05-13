@@ -21,7 +21,7 @@ resource "aws_security_group" "this" {
   }
 
   tags = {
-    Name      = local.name
+    Name = local.name
   }
 
   lifecycle {

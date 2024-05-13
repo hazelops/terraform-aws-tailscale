@@ -7,7 +7,7 @@ variable "vpc_cidr_block" {}
 variable "ssh_key_id" {}
 variable "aws_key_name" {}
 
-# Obtain Tailscale auth key from AWS SSM Parameter Store
+# Obtain Tailscale api key from AWS SSM Parameter Store
 data "aws_ssm_parameter" "tailscale_api_token" {
   name = "/${var.env}/global/tailscale_api_token"
 }
