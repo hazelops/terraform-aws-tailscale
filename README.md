@@ -1,5 +1,4 @@
 # Terraform AWS Tailscale Module
-
 This module is used to deploy a [Tailscale](https://tailscale.com) router instance to set up access from VPC to the
 Tailscale Cloud.
 
@@ -9,6 +8,7 @@ Module logic is the following:
 3. Create an Autoscale Group with a single instance using and connect it to the TailScale network.
 
 ## Usage
+
 _Please refer to [Tailscale Configuration](#tailscale-configuration) first_
 
 ```terraform
@@ -24,6 +24,7 @@ module "tailscale" {
 }
 
 ```
+More examples can be found in the [examples directory](./examples).
 
 ## Tailscale Configuration
 
@@ -48,15 +49,20 @@ module "tailscale" {
 }
 ```
 
+Make sure to approve the advertised route:
+1. Go to [Machines](https://login.tailscale.com/admin/machines) page
+2. Find the machine and click on the `...` button.
+3. Select "Edit route settings", check the checkbox and then click "Save".
+
 **_The tag must be added to the ACL to disable automatic key expiration!_**
 
 Default parameter for tag is `tag:<your-environment>`.
 
-More examples can be found in [Tailscale manual](https://tailscale.com/kb/1068/acl-tags#defining-a-tag).
+More examples can be found in [Tailscale Tag Docs](https://tailscale.com/kb/1068/acl-tags#defining-a-tag).
 
 3. Create AWS SSM Parameter using the obtained Tailscale API access token. For example, use the following path
    pattern: `<env-name>/global/tailscale_api_token`. For more information please refer
-   to [AWS manual](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-create-console.html).
+   to [AWS Docs](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-create-console.html).
 4. Add data source to Terraform code like in the [example configuration main.tf file](./examples/minimum/main.tf).
 5. In the module call parameters, set `api_token` variable like in
    the [example configuration main.tf file](./examples/minimum/main.tf).

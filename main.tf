@@ -1,5 +1,6 @@
 # Create Tailscale autoscaling group
 resource "aws_autoscaling_group" "this" {
+  name = "${var.env}-tailscale"
   vpc_zone_identifier = var.subnets
   min_size            = var.asg["max_size"]
   max_size            = var.asg["min_size"]
