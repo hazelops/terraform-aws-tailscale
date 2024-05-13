@@ -27,9 +27,8 @@ module "tailscale" {
 
 ## Tailscale Configuration
 
-1. Create [Tailscale API access token](https://tailscale.com/kb/1252/key-secret-management#api-access-tokens)
+1. Create [Tailscale API access token](https://login.tailscale.com/admin/settings/keys) (More info on Access tokens can be found [here](https://tailscale.com/kb/1083/acl-tags#access-tokens)
 2. Add tag to the [ACL control list](https://login.tailscale.com/admin/acls/file). ACL should look like this:
-
   ```json
   {
   "acls": [
