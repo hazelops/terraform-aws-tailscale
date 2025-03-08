@@ -7,10 +7,22 @@ resource "aws_autoscaling_group" "this" {
   launch_template {
     id = aws_launch_template.this.id
   }
+
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
+
   tag {
     key                 = "Name"
     value               = local.name
     propagate_at_launch = true
+  }
+
+  lifecycle {
+    replace_triggered_by = [aws_launch_template.this]
   }
 }
 
@@ -35,8 +47,16 @@ resource "aws_launch_template" "this" {
   }
   tags = merge({
     Name      = local.name
-    TailScale = "enabled"
+    TailScale = "true"
   }, var.tags)
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge({
+      Name      = local.name
+      TailScale = "true"
+    }, var.tags)
+  }
 }
 
 # Tailscale key
