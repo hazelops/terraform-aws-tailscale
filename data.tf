@@ -1,4 +1,4 @@
-# Generate userdata for Tailscale instance
+# Tailscale instance user data
 data "template_file" "ec2_user_data" {
   template = file("${path.module}/templates/ec2_user_data.tpl.yml")
 
@@ -9,7 +9,7 @@ data "template_file" "ec2_user_data" {
   }
 }
 
-# Get latest AMI info for Amazon Linux 2023
+# Instance AMI
 data "aws_ami" "this" {
   most_recent = true
 

@@ -102,8 +102,14 @@ variable "key_preauthorized" {
   description = "Determines whether or not the machines authenticated by the key will be authorized for the Tailnet by default"
 }
 
-variable "tags" {
+variable "tailscale_tags" {
   type        = list(string)
   default     = []
-  description = "List of tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key"
+  description = "List of Tailscale tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key"
+}
+
+variable "tags" {
+    type        = map(string)
+    default     = {}
+    description = "AWS tags for the Tailscale instance"
 }

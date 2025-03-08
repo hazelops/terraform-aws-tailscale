@@ -1,6 +1,6 @@
-# Create Tailscale autoscaling group
+# Tailscale autoscaling group
 resource "aws_autoscaling_group" "this" {
-  name = "${var.env}-tailscale"
+  name                = local.name
   vpc_zone_identifier = var.subnets
   min_size            = var.asg["max_size"]
   max_size            = var.asg["min_size"]
@@ -14,9 +14,9 @@ resource "aws_autoscaling_group" "this" {
   }
 }
 
-# Create Tailscale launch template
+# Tailscale launch template
 resource "aws_launch_template" "this" {
-  name = "${var.env}-tailscale-template"
+  name = local.name
   iam_instance_profile {
     name = aws_iam_instance_profile.this.name
   }
@@ -33,8 +33,17 @@ resource "aws_launch_template" "this" {
     associate_public_ip_address = var.public_ip_enabled
     security_groups             = concat(var.ext_security_groups, [aws_security_group.this.id])
   }
-  tags = {
+  tags = merge({
     Name      = local.name
     TailScale = "enabled"
-  }
+  }, var.tags)
+}
+
+# Tailscale key
+resource "tailscale_tailnet_key" "this" {
+  reusable      = var.key_reusable
+  ephemeral     = var.key_ephemeral
+  preauthorized = var.key_preauthorized
+  expiry        = var.key_expiry
+  tags          = concat(["tag:${var.env}"], var.tailscale_tags)
 }
