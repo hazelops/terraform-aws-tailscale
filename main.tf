@@ -36,8 +36,12 @@ resource "aws_launch_template" "this" {
   instance_initiated_shutdown_behavior = "terminate"
   instance_type                        = var.instance_type
   key_name                             = var.ec2_key_pair_name
-  user_data                            = base64encode(data.template_file.ec2_user_data.rendered)
-  update_default_version               = true
+  user_data = base64encode(templatefile("${path.module}/templates/ec2_user_data.tpl.yml", {
+    auth_key         = tailscale_tailnet_key.this.key
+    advertise_routes = join(",", var.allowed_cidr_blocks)
+    hostname         = local.name
+  }))
+  update_default_version = true
   monitoring {
     enabled = var.monitoring_enabled
   }

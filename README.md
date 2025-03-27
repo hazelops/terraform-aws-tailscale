@@ -99,9 +99,7 @@ terraform state rm module.tailscale.tailscale_tailnet_key.this
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >=1.2.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >=4.30.0 |
-| <a name="requirement_local"></a> [local](#requirement\_local) | ~> 1.2 |
 | <a name="requirement_tailscale"></a> [tailscale](#requirement\_tailscale) | 0.13.13 |
-| <a name="requirement_template"></a> [template](#requirement\_template) | >=2.2 |
 
 ## Providers
 
@@ -109,7 +107,6 @@ terraform state rm module.tailscale.tailscale_tailnet_key.this
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >=4.30.0 |
 | <a name="provider_tailscale"></a> [tailscale](#provider\_tailscale) | 0.13.13 |
-| <a name="provider_template"></a> [template](#provider\_template) | >=2.2 |
 
 ## Modules
 
@@ -128,7 +125,6 @@ No modules.
 | [tailscale_tailnet_key.this](https://registry.terraform.io/providers/tailscale/tailscale/0.13.13/docs/resources/tailnet_key) | resource |
 | [aws_ami.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_iam_policy_document.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
-| [template_file.ec2_user_data](https://registry.terraform.io/providers/hashicorp/template/latest/docs/data-sources/file) | data source |
 
 ## Inputs
 
@@ -137,7 +133,7 @@ No modules.
 | <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | List of network subnets that are allowed. According to PCI-DSS, CIS AWS and SOC2 providing a default wide-open CIDR is not secure. | `list(string)` | n/a | yes |
 | <a name="input_ami_id"></a> [ami\_id](#input\_ami\_id) | Optional AMI ID for Tailscale instance. Otherwise latest Amazon Linux will be used. One might want to lock this down to avoid unexpected upgrades. | `string` | `""` | no |
 | <a name="input_api_token"></a> [api\_token](#input\_api\_token) | Tailscale API access token | `string` | n/a | yes |
-| <a name="input_asg"></a> [asg](#input\_asg) | Scaling settings of an Auto Scaling Group | `map(any)` | <pre>{<br/>  "max_size": 1,<br/>  "min_size": 1<br/>}</pre> | no |
+| <a name="input_asg"></a> [asg](#input\_asg) | Scaling settings of an Auto Scaling Group | `map(any)` | <pre>{<br>  "max_size": 1,<br>  "min_size": 1<br>}</pre> | no |
 | <a name="input_ec2_key_pair_name"></a> [ec2\_key\_pair\_name](#input\_ec2\_key\_pair\_name) | EC2 key pair name to use for Tailscale instance | `string` | n/a | yes |
 | <a name="input_env"></a> [env](#input\_env) | Environment name (typically dev/prod) | `string` | n/a | yes |
 | <a name="input_ext_security_groups"></a> [ext\_security\_groups](#input\_ext\_security\_groups) | External security groups to add to the Tailscale instance | `list(any)` | `[]` | no |
@@ -152,7 +148,7 @@ No modules.
 | <a name="input_ssm_role_arn"></a> [ssm\_role\_arn](#input\_ssm\_role\_arn) | SSM role to attach to a Tailscale instance | `string` | `"arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"` | no |
 | <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security. | `list(string)` | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | AWS tags for the Tailscale instance | `map(string)` | `{}` | no |
-| <a name="input_tailscale_tags"></a> [tailscale\_tags](#input\_tailscale\_tags) | List of Tailscale tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key | `set(string)` | `[]` | no |
+| <a name="input_tailscale_tags"></a> [tailscale\_tags](#input\_tailscale\_tags) | List of Tailscale tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key | `list(string)` | `[]` | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | VPC ID where the Tailscale instance will be placed | `string` | n/a | yes |
 
 ## Outputs
