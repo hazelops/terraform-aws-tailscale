@@ -31,7 +31,7 @@ variable "name" {
 
 variable "instance_type" {
   type        = string
-  default     = "t3.nano"
+  default     = "t4g.nano"
   description = "Type of Tailscale instance"
 }
 
