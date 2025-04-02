@@ -3,8 +3,8 @@ This module is used to deploy a [Tailscale](https://tailscale.com) router instan
 Tailscale Cloud.
 
 Module logic is the following:
-1. Connect to TailScale API using the Terraform Provider and Tailscale api token.
-2. Generate TailScale Auth Key and place it into the instance.
+1. Connect to Tailscale API using the Terraform Provider and Tailscale api token.
+2. Generate Tailscale Auth Key and place it into the instance.
 3. Create an Autoscale Group with a single instance using and connect it to the TailScale network.
 
 ## Usage
@@ -14,7 +14,7 @@ _Please refer to [Tailscale Configuration](#tailscale-configuration) first_
 ```terraform
 module "tailscale" {
   source            = "registry.terraform.io/hazelops/tailscale/aws"
-  version           = "~>0.2"
+  version           = "~>2.0"
   allowed_cidr_blocks = ["0.0.0.0/0"] # Please lock this down to your specific CIDR
   ec2_key_pair_name = "default-key"
   env               = "prod"
@@ -91,6 +91,19 @@ To remove it, run the following code:
 ```shell
 terraform state rm module.tailscale.tailscale_tailnet_key.this
 ```
+
+## Migration from v1.x to v2.x
+
+In order to upgrade module to v2.x, please follow instructions:
+ 
+ Upgrade provider:
+
+```bash
+ize terraform init -upgrade
+```
+
+ Then deploy as usual. 
+
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

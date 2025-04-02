@@ -1,10 +1,11 @@
 # Instance AMI
+# Get latest AMI info for Amazon Linux
 data "aws_ami" "this" {
   most_recent = true
 
   filter {
     name   = "name"
-    values = ["al2023-ami-ecs-hvm-2023*-*-arm64"]
+    values = ["al2023-ami-2023*-*-${local.instance_arch}"]
   }
 
   filter {
