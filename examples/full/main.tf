@@ -14,7 +14,7 @@ data "aws_ssm_parameter" "tailscale_api_token" {
 
 module "tailscale" {
   source              = "registry.terraform.io/hazelops/tailscale/aws"
-  version             = "~>0.2"
+  version             = "~>2.0"
   name                = "tailscale-instance"
   allowed_cidr_blocks = [var.vpc_cidr_block]
   ec2_key_pair_name   = var.aws_key_name
@@ -23,7 +23,7 @@ module "tailscale" {
   vpc_id              = var.vpc_id
   public_ip_enabled   = true
   ami_id              = "ami-0e1c5d8c23330dee3"
-  instance_type       = "t3.micro"
+  instance_type       = "t4g.nano"
   tailscale_api_token = data.aws_ssm_parameter.tailscale_api_token.value # Please don't store secrets in plain text
   monitoring_enabled  = true
   ext_security_groups = []
