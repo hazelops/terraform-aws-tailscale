@@ -92,19 +92,6 @@ To remove it, run the following code:
 terraform state rm module.tailscale.tailscale_tailnet_key.this
 ```
 
-## Migration from v1.x to v2.x
-
-In order to upgrade module to v2.x, please follow instructions:
- 
- Upgrade provider:
-
-```bash
-ize terraform init -upgrade
-```
-
- Then deploy as usual. 
-
-
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
