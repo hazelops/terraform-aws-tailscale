@@ -3,8 +3,8 @@ This module is used to deploy a [Tailscale](https://tailscale.com) router instan
 Tailscale Cloud.
 
 Module logic is the following:
-1. Connect to TailScale API using the Terraform Provider and Tailscale api token.
-2. Generate TailScale Auth Key and place it into the instance.
+1. Connect to Tailscale API using the Terraform Provider and Tailscale api token.
+2. Generate Tailscale Auth Key and place it into the instance.
 3. Create an Autoscale Group with a single instance using and connect it to the TailScale network.
 
 ## Usage
@@ -14,7 +14,7 @@ _Please refer to [Tailscale Configuration](#tailscale-configuration) first_
 ```terraform
 module "tailscale" {
   source            = "registry.terraform.io/hazelops/tailscale/aws"
-  version           = "~>0.2"
+  version           = "~>2.0"
   allowed_cidr_blocks = ["0.0.0.0/0"] # Please lock this down to your specific CIDR
   ec2_key_pair_name = "default-key"
   env               = "prod"
@@ -99,14 +99,14 @@ terraform state rm module.tailscale.tailscale_tailnet_key.this
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >=1.2.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >=4.30.0 |
-| <a name="requirement_tailscale"></a> [tailscale](#requirement\_tailscale) | 0.13.13 |
+| <a name="requirement_tailscale"></a> [tailscale](#requirement\_tailscale) | 0.18 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >=4.30.0 |
-| <a name="provider_tailscale"></a> [tailscale](#provider\_tailscale) | 0.13.13 |
+| <a name="provider_tailscale"></a> [tailscale](#provider\_tailscale) | 0.18 |
 
 ## Modules
 
@@ -122,7 +122,7 @@ No modules.
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_launch_template.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/launch_template) | resource |
 | [aws_security_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
-| [tailscale_tailnet_key.this](https://registry.terraform.io/providers/tailscale/tailscale/0.13.13/docs/resources/tailnet_key) | resource |
+| [tailscale_tailnet_key.this](https://registry.terraform.io/providers/tailscale/tailscale/0.18/docs/resources/tailnet_key) | resource |
 | [aws_ami.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_iam_policy_document.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
@@ -137,7 +137,7 @@ No modules.
 | <a name="input_ec2_key_pair_name"></a> [ec2\_key\_pair\_name](#input\_ec2\_key\_pair\_name) | EC2 key pair name to use for Tailscale instance | `string` | n/a | yes |
 | <a name="input_env"></a> [env](#input\_env) | Environment name (typically dev/prod) | `string` | n/a | yes |
 | <a name="input_ext_security_groups"></a> [ext\_security\_groups](#input\_ext\_security\_groups) | External security groups to add to the Tailscale instance | `list(any)` | `[]` | no |
-| <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | Type of Tailscale instance | `string` | `"t3.nano"` | no |
+| <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | Type of Tailscale instance | `string` | `"t4g.nano"` | no |
 | <a name="input_key_ephemeral"></a> [key\_ephemeral](#input\_key\_ephemeral) | Indicates whether the key is ephemeral | `bool` | `true` | no |
 | <a name="input_key_expiry"></a> [key\_expiry](#input\_key\_expiry) | Expiry of the key in seconds. Defaults to 7776000 (90 days) | `number` | `7776000` | no |
 | <a name="input_key_preauthorized"></a> [key\_preauthorized](#input\_key\_preauthorized) | Determines whether or not the machines authenticated by the key will be authorized for the Tailnet by default | `bool` | `true` | no |
