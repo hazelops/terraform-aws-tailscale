@@ -2,8 +2,8 @@
 resource "aws_autoscaling_group" "this" {
   name                = local.name
   vpc_zone_identifier = var.subnets
-  min_size            = var.asg["max_size"]
-  max_size            = var.asg["min_size"]
+  min_size            = var.asg["min_size"]
+  max_size            = var.asg["max_size"]
   launch_template {
     id = aws_launch_template.this.id
   }
@@ -40,6 +40,9 @@ resource "aws_launch_template" "this" {
     auth_key         = tailscale_tailnet_key.this.key
     advertise_routes = join(",", var.allowed_cidr_blocks)
     hostname         = local.name
+    datadog_enabled  = var.datadog_enabled
+    datadog_api_key  = var.datadog_api_key
+    env              = var.env
   }))
   update_default_version = true
   monitoring {

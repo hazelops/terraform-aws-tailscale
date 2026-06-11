@@ -1,73 +1,121 @@
 # Terraform AWS Tailscale Module
-This module is used to deploy a [Tailscale](https://tailscale.com) router instance to set up access from VPC to the
-Tailscale Cloud.
-
-Module logic is the following:
-1. Connect to Tailscale API using the Terraform Provider and Tailscale api token.
-2. Generate Tailscale Auth Key and place it into the instance.
-3. Create an Autoscale Group with a single instance using and connect it to the TailScale network.
+This module deploys a [Tailscale](https://tailscale.com) subnet router on AWS using an Auto Scaling Group and launch template. It authenticates via the Tailscale Terraform provider using an OAuth client and generates an auth key for the instance automatically.
 
 ## Usage
 
-_Please refer to [Tailscale Configuration](#tailscale-configuration) first_
+_Please refer to [Tailscale Configuration](#tailscale-configuration) first._
 
 ```terraform
-module "tailscale" {
-  source            = "registry.terraform.io/hazelops/tailscale/aws"
-  version           = "~>2.0"
-  allowed_cidr_blocks = ["0.0.0.0/0"] # Please lock this down to your specific CIDR
-  ec2_key_pair_name = "default-key"
-  env               = "prod"
-  subnets           = ["subnet-0000000", "subnet-0000000"]
-  vpc_id            = "vpc-0000000"
-  api_token         = "00000000000000000000000000" # Please don't store secrets in plain text
+data "aws_ssm_parameter" "tailscale_oauth_client_id" {
+  name = "/${var.env}/global/tailscale_oauth_client_id"
 }
 
-```
-More examples can be found in the [examples directory](./examples).
+data "aws_ssm_parameter" "tailscale_oauth_client_secret" {
+  name = "/${var.env}/global/tailscale_oauth_client_secret"
+}
 
-## Tailscale Configuration
+module "tailscale" {
+  source  = "registry.terraform.io/hazelops/tailscale/aws"
+  version = "~> 3.0"
 
-1. Create [Tailscale API access token](https://login.tailscale.com/admin/settings/keys) (More info on Access tokens can be found [here](https://tailscale.com/kb/1083/acl-tags#access-tokens)
-2. Add tag to the [ACL control list](https://login.tailscale.com/admin/acls/file). ACL should look like this:
-  ```json
-  {
-  "acls": [
-    {
-      "action": "accept",
-      "ports": [
-        "*:*"
-      ],
-      "users": [
-        "*"
-      ]
-    }
-  ],
-  "tagOwners": {
-    "tag:<your-environment>": []
+  env                           = "prod"
+  vpc_id                        = "vpc-0000000"
+  subnets                       = ["subnet-aaa0001", "subnet-bbb0002"] # Two AZs for HA
+  allowed_cidr_blocks           = ["10.0.0.0/16"]
+  ec2_key_pair_name             = "default-key"
+  tailscale_oauth_client_id     = data.aws_ssm_parameter.tailscale_oauth_client_id.value
+  tailscale_oauth_client_secret = data.aws_ssm_parameter.tailscale_oauth_client_secret.value
+
+  asg = {
+    min_size = 2
+    max_size = 2
   }
 }
 ```
 
-Make sure to approve the advertised route:
-1. Go to [Machines](https://login.tailscale.com/admin/machines) page
-2. Find the machine and click on the `...` button.
-3. Select "Edit route settings", check the checkbox and then click "Save".
+More examples can be found in the [examples directory](./examples).
 
-**_The tag must be added to the ACL to disable automatic key expiration!_**
+## Tailscale Configuration
 
-Default parameter for tag is `tag:<your-environment>`.
+### 1. Create an OAuth client
 
-More examples can be found in [Tailscale Tag Docs](https://tailscale.com/kb/1068/acl-tags#defining-a-tag).
+Go to the [Tailscale Admin Console](https://login.tailscale.com/admin/settings/oauth) → **Settings** → **OAuth clients** → **Generate OAuth client**.
 
-3. Create AWS SSM Parameter using the obtained Tailscale API access token. For example, use the following path
-   pattern: `<env-name>/global/tailscale_api_token`. For more information please refer
-   to [AWS Docs](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-create-console.html).
-4. Add data source to Terraform code like in the [example configuration main.tf file](./examples/minimum/main.tf).
-5. In the module call parameters, set `api_token` variable like in
-   the [example configuration main.tf file](./examples/minimum/main.tf).
-6. Alternatively Tailscale API token could be set as string, but this is very unsafe, therefore it is *
-   *_highly not recommended_** to do this.
+Set the scope to **Auth Keys — Write** and select the tags used by the module (e.g. `tag:<your-environment>`).
+
+Save the **Client ID** and **Client Secret**.
+
+### 2. Store credentials in SSM Parameter Store
+
+Create two SSM parameters (SecureString recommended for the secret):
+
+```bash
+aws ssm put-parameter \
+  --name "/<env>/global/tailscale_oauth_client_id" \
+  --type "String" \
+  --value "<your-client-id>"
+
+aws ssm put-parameter \
+  --name "/<env>/global/tailscale_oauth_client_secret" \
+  --type "SecureString" \
+  --value "<your-client-secret>"
+```
+
+### 3. Configure the ACL
+
+Add the tag and `autoApprovers` to your [ACL policy](https://login.tailscale.com/admin/acls/file):
+
+```json
+{
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["*"],
+      "dst": ["*:*"]
+    }
+  ],
+  "tagOwners": {
+    "tag:<your-environment>": []
+  },
+  "autoApprovers": {
+    "routes": {
+      "10.0.0.0/16": ["tag:<your-environment>"]
+    }
+  }
+}
+```
+
+With `autoApprovers` configured, advertised routes are approved automatically — no manual approval in the admin console is needed.
+
+**The tag must be added to the ACL to disable automatic key expiration.**
+
+More info on tags: [Tailscale ACL Tags](https://tailscale.com/kb/1068/acl-tags#defining-a-tag).
+
+## High Availability
+
+Running two instances (e.g. `asg = { min_size = 2, max_size = 2 }`) in subnets across two Availability Zones provides automatic failover. Both instances advertise the same routes, and Tailscale handles failover transparently with ~15 seconds of downtime.
+
+**Prerequisite:** `autoApprovers` must be configured in the Tailscale ACL (see [Configure the ACL](#3-configure-the-acl)). Without it, routes require manual approval and failover will not work automatically.
+
+**Recovery cycle:** When one instance fails, Tailscale switches traffic to the surviving instance. The ASG detects the failure and launches a replacement. The new instance automatically joins the Tailnet, advertises the same routes, and becomes the standby node — restoring the HA pair without manual intervention.
+
+## Datadog Monitoring (Optional)
+
+Enable Datadog Agent with a custom Tailscale health check:
+
+```terraform
+module "tailscale" {
+  # ... other variables ...
+  datadog_enabled = true
+  datadog_api_key = var.datadog_api_key
+}
+```
+
+This installs Datadog Agent 7 and a custom check that emits:
+- `tailscale.self.online` (gauge, 0/1)
+- `tailscale.peers.count` (gauge)
+- `tailscale.health.issues` (gauge)
+- `tailscale.up` (service check, OK or CRITICAL)
 
 ## Troubleshooting
 
@@ -99,14 +147,14 @@ terraform state rm module.tailscale.tailscale_tailnet_key.this
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >=1.2.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >=4.30.0 |
-| <a name="requirement_tailscale"></a> [tailscale](#requirement\_tailscale) | 0.18 |
+| <a name="requirement_tailscale"></a> [tailscale](#requirement\_tailscale) | ~> 0.29 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >=4.30.0 |
-| <a name="provider_tailscale"></a> [tailscale](#provider\_tailscale) | 0.18 |
+| <a name="provider_tailscale"></a> [tailscale](#provider\_tailscale) | ~> 0.29 |
 
 ## Modules
 
@@ -122,7 +170,7 @@ No modules.
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_launch_template.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/launch_template) | resource |
 | [aws_security_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
-| [tailscale_tailnet_key.this](https://registry.terraform.io/providers/tailscale/tailscale/0.18/docs/resources/tailnet_key) | resource |
+| [tailscale_tailnet_key.this](https://registry.terraform.io/providers/tailscale/tailscale/latest/docs/resources/tailnet_key) | resource |
 | [aws_ami.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_iam_policy_document.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
@@ -132,8 +180,9 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | List of network subnets that are allowed. According to PCI-DSS, CIS AWS and SOC2 providing a default wide-open CIDR is not secure. | `list(string)` | n/a | yes |
 | <a name="input_ami_id"></a> [ami\_id](#input\_ami\_id) | Optional AMI ID for Tailscale instance. Otherwise latest Amazon Linux will be used. One might want to lock this down to avoid unexpected upgrades. | `string` | `""` | no |
-| <a name="input_api_token"></a> [api\_token](#input\_api\_token) | Tailscale API access token | `string` | n/a | yes |
 | <a name="input_asg"></a> [asg](#input\_asg) | Scaling settings of an Auto Scaling Group | `map(any)` | <pre>{<br>  "max_size": 1,<br>  "min_size": 1<br>}</pre> | no |
+| <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | Datadog API key (required if datadog\_enabled is true) | `string` | `""` | no |
+| <a name="input_datadog_enabled"></a> [datadog\_enabled](#input\_datadog\_enabled) | Whether to enable Datadog Agent monitoring on the Tailscale instance | `bool` | `false` | no |
 | <a name="input_ec2_key_pair_name"></a> [ec2\_key\_pair\_name](#input\_ec2\_key\_pair\_name) | EC2 key pair name to use for Tailscale instance | `string` | n/a | yes |
 | <a name="input_env"></a> [env](#input\_env) | Environment name (typically dev/prod) | `string` | n/a | yes |
 | <a name="input_ext_security_groups"></a> [ext\_security\_groups](#input\_ext\_security\_groups) | External security groups to add to the Tailscale instance | `list(any)` | `[]` | no |
@@ -144,10 +193,12 @@ No modules.
 | <a name="input_key_reusable"></a> [key\_reusable](#input\_key\_reusable) | Indicates whether the key is reusable | `bool` | `true` | no |
 | <a name="input_monitoring_enabled"></a> [monitoring\_enabled](#input\_monitoring\_enabled) | Whether to enable monitoring for the Auto Scaling Group | `bool` | `true` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name for Tailscale instance | `string` | `"tailscale-router"` | no |
-| <a name="input_public_ip_enabled"></a> [public\_ip\_enabled](#input\_public\_ip\_enabled) | Wheter to enable a public IP for Tailscale instance | `bool` | `false` | no |
-| <a name="input_ssm_role_arn"></a> [ssm\_role\_arn](#input\_ssm\_role\_arn) | SSM role to attach to a Tailscale instance | `string` | `"arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"` | no |
-| <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security. | `list(string)` | n/a | yes |
+| <a name="input_public_ip_enabled"></a> [public\_ip\_enabled](#input\_public\_ip\_enabled) | Whether to enable a public IP for Tailscale instance | `bool` | `false` | no |
+| <a name="input_ssm_role_arn"></a> [ssm\_role\_arn](#input\_ssm\_role\_arn) | SSM policy ARN to attach to the Tailscale instance IAM role | `string` | `"arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"` | no |
+| <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets where the Tailscale instance will be placed. It is recommended to use a private subnet for better security. | `list(string)` | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | AWS tags for the Tailscale instance | `map(string)` | `{}` | no |
+| <a name="input_tailscale_oauth_client_id"></a> [tailscale\_oauth\_client\_id](#input\_tailscale\_oauth\_client\_id) | Tailscale OAuth client ID | `string` | n/a | yes |
+| <a name="input_tailscale_oauth_client_secret"></a> [tailscale\_oauth\_client\_secret](#input\_tailscale\_oauth\_client\_secret) | Tailscale OAuth client secret | `string` | n/a | yes |
 | <a name="input_tailscale_tags"></a> [tailscale\_tags](#input\_tailscale\_tags) | List of Tailscale tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key | `list(string)` | `[]` | no |
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | VPC ID where the Tailscale instance will be placed | `string` | n/a | yes |
 
