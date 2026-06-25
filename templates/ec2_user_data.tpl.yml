@@ -24,7 +24,27 @@ write_files:
     content: |
       import json
       import subprocess
+      from datetime import datetime, timezone
       from datadog_checks.base import AgentCheck
+
+
+      def _age_seconds(ts):
+          # Age of the last handshake in seconds; None if there was never one.
+          if not ts or ts.startswith("0001"):
+              return None
+          s = ts.rstrip("Z")
+          if "." in s:
+              head, frac = s.split(".", 1)
+              s = head + "." + frac[:6]
+              fmt = "%Y-%m-%dT%H:%M:%S.%f"
+          else:
+              fmt = "%Y-%m-%dT%H:%M:%S"
+          try:
+              dt = datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+          except ValueError:
+              return None
+          return (datetime.now(timezone.utc) - dt).total_seconds()
+
 
       class TailscaleCheck(AgentCheck):
           def check(self, instance):
@@ -35,11 +55,47 @@ write_files:
                   )
                   status = json.loads(result.stdout)
 
-                  online = 1 if status.get("Self", {}).get("Online", False) else 0
+                  self_node = status.get("Self", {}) or {}
+                  online = 1 if self_node.get("Online", False) else 0
                   self.gauge("tailscale.self.online", online)
 
-                  peers = status.get("Peer", {})
+                  # Subnets this node serves as primary (approved and active).
+                  # In HA: 1 on the active node, 0 on the standby.
+                  primary_routes = self_node.get("PrimaryRoutes") or []
+                  self.gauge("tailscale.routes.primary_count", len(primary_routes))
+
+                  peers = status.get("Peer", {}) or {}
                   self.gauge("tailscale.peers.count", len(peers))
+
+                  online_peers = 0
+                  direct_peers = 0
+                  relayed_peers = 0
+                  for pkey, p in peers.items():
+                      host = p.get("HostName") or p.get("DNSName") or pkey[:12]
+                      ptags = ["peer:" + host]
+
+                      p_online = 1 if p.get("Online") else 0
+                      online_peers += p_online
+                      self.gauge("tailscale.peer.online", p_online, tags=ptags)
+                      self.gauge("tailscale.peer.rx_bytes", p.get("RxBytes", 0), tags=ptags)
+                      self.gauge("tailscale.peer.tx_bytes", p.get("TxBytes", 0), tags=ptags)
+
+                      # Relay == "" -> direct connection, otherwise traffic goes via a DERP relay.
+                      is_direct = 1 if p.get("Relay", "") == "" else 0
+                      self.gauge("tailscale.peer.direct", is_direct, tags=ptags)
+                      if p_online:
+                          if is_direct:
+                              direct_peers += 1
+                          else:
+                              relayed_peers += 1
+
+                      age = _age_seconds(p.get("LastHandshake"))
+                      if age is not None:
+                          self.gauge("tailscale.peer.last_handshake_age_seconds", age, tags=ptags)
+
+                  self.gauge("tailscale.peers.online", online_peers)
+                  self.gauge("tailscale.peers.direct", direct_peers)
+                  self.gauge("tailscale.peers.relayed", relayed_peers)
 
                   health = status.get("Health") or []
                   self.gauge("tailscale.health.issues", len(health))

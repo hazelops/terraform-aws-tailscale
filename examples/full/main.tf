@@ -24,6 +24,7 @@ module "tailscale" {
   vpc_id                        = var.vpc_id
   public_ip_enabled             = true
   instance_type                 = "t4g.nano"
+  ami_id                        = "ami-0e1c5d8c23330dee3"
   tailscale_oauth_client_id     = data.aws_ssm_parameter.tailscale_oauth_client_id.value
   tailscale_oauth_client_secret = data.aws_ssm_parameter.tailscale_oauth_client_secret.value
   monitoring_enabled            = true
