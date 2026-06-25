@@ -100,10 +100,23 @@ write_files:
                   health = status.get("Health") or []
                   self.gauge("tailscale.health.issues", len(health))
 
-                  if online and len(health) == 0:
-                      self.service_check("tailscale.up", AgentCheck.OK)
+                  # Some health messages are benign for a subnet router (e.g. it
+                  # advertises routes but does not accept others') and must not
+                  # raise a false alert.
+                  benign = ("--accept-routes is false",)
+                  real_issues = [h for h in health
+                                 if not any(b in h for b in benign)]
+
+                  # CRITICAL only when the node is actually offline. Real
+                  # (non-benign) health issues degrade to WARNING; otherwise OK.
+                  if not online:
+                      self.service_check("tailscale.up", AgentCheck.CRITICAL,
+                                         message="tailscaled reports node offline")
+                  elif real_issues:
+                      self.service_check("tailscale.up", AgentCheck.WARNING,
+                                         message="; ".join(real_issues))
                   else:
-                      self.service_check("tailscale.up", AgentCheck.CRITICAL)
+                      self.service_check("tailscale.up", AgentCheck.OK)
               except Exception as e:
                   self.service_check("tailscale.up", AgentCheck.CRITICAL, message=str(e))
                   self.gauge("tailscale.self.online", 0)

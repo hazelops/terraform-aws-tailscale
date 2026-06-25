@@ -112,10 +112,31 @@ module "tailscale" {
 ```
 
 This installs Datadog Agent 7 and a custom check that emits:
+
 - `tailscale.self.online` (gauge, 0/1)
 - `tailscale.peers.count` (gauge)
-- `tailscale.health.issues` (gauge)
-- `tailscale.up` (service check, OK or CRITICAL)
+- `tailscale.peers.online` / `tailscale.peers.direct` / `tailscale.peers.relayed` (gauges) — tailnet-wide aggregates
+- `tailscale.peer.online` / `tailscale.peer.rx_bytes` / `tailscale.peer.tx_bytes` / `tailscale.peer.direct` / `tailscale.peer.last_handshake_age_seconds` (gauges, tagged `peer:<hostname>`)
+- `tailscale.routes.primary_count` (gauge) — subnets this node serves as primary subnet router (approved and active)
+- `tailscale.health.issues` (gauge) — total count of Tailscale health messages
+- `tailscale.up` (service check)
+
+### Service check states
+
+The `tailscale.up` service check distinguishes real failures from benign health
+warnings, so it does not page on issues that are normal for a subnet router:
+
+| Node state | Health messages | `tailscale.up` |
+|------------|-----------------|----------------|
+| Online | none | `OK` |
+| Online | only benign (e.g. "advertising routes but `--accept-routes` is false") | `OK` |
+| Online | real issue present (e.g. DERP region unreachable) | `WARNING` (message lists the real issues only) |
+| Offline | any | `CRITICAL` |
+
+Benign messages are filtered out before evaluation, so a subnet router that
+advertises routes without accepting others' does not trigger a false alert.
+`tailscale.health.issues` still reports the **total** count of health messages
+(including benign ones) for dashboard visibility.
 
 ## Troubleshooting
 
@@ -134,11 +155,29 @@ module.tailscale.tailscale_tailnet_key.this (orphan), after which you can
 remove the provider configuration again.
 ```
 
-To remove it, run the following code:
+This is expected Terraform behavior, not a module bug. The module declares its
+own `provider "tailscale"` (configured from the OAuth variables). Commenting out
+or deleting the module call removes that provider configuration, but the state
+still contains `tailscale_tailnet_key.this`, which that provider created — and
+Terraform needs the provider to destroy it. A resource and its provider
+configuration cannot be removed in the same operation.
+
+**Recommended — destroy the module as a unit while the provider still exists:**
+
+1. Re-add (uncomment) the `module "tailscale"` block.
+2. Destroy it explicitly with `terraform destroy -target=module.tailscale` — this
+   removes both the AWS resources and the Tailscale auth key cleanly.
+3. Remove (comment out / delete) the module block. `terraform plan` should then
+   report no changes.
+
+**Alternative — drop only the orphaned resource from state:**
 
 ```shell
 terraform state rm module.tailscale.tailscale_tailnet_key.this
 ```
+
+This lets the apply proceed, but the auth key is **not** deleted from Tailscale
+(Terraform just forgets it) — revoke it manually in the Admin Console.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
