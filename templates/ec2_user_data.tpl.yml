@@ -48,6 +48,9 @@ write_files:
 
       class TailscaleCheck(AgentCheck):
           def check(self, instance):
+              # Instance-level tags from conf.yaml are NOT auto-applied to custom
+              # checks, so read them here and attach to every metric / service check.
+              base_tags = list(instance.get("tags", []))
               try:
                   result = subprocess.run(
                       ["sudo", "/usr/bin/tailscale", "status", "--json"],
@@ -57,22 +60,22 @@ write_files:
 
                   self_node = status.get("Self", {}) or {}
                   online = 1 if self_node.get("Online", False) else 0
-                  self.gauge("tailscale.self.online", online)
+                  self.gauge("tailscale.self.online", online, tags=base_tags)
 
                   # Subnets this node serves as primary (approved and active).
                   # In HA: 1 on the active node, 0 on the standby.
                   primary_routes = self_node.get("PrimaryRoutes") or []
-                  self.gauge("tailscale.routes.primary_count", len(primary_routes))
+                  self.gauge("tailscale.routes.primary_count", len(primary_routes), tags=base_tags)
 
                   peers = status.get("Peer", {}) or {}
-                  self.gauge("tailscale.peers.count", len(peers))
+                  self.gauge("tailscale.peers.count", len(peers), tags=base_tags)
 
                   online_peers = 0
                   direct_peers = 0
                   relayed_peers = 0
                   for pkey, p in peers.items():
                       host = p.get("HostName") or p.get("DNSName") or pkey[:12]
-                      ptags = ["peer:" + host]
+                      ptags = base_tags + ["peer:" + host]
 
                       p_online = 1 if p.get("Online") else 0
                       online_peers += p_online
@@ -93,12 +96,12 @@ write_files:
                       if age is not None:
                           self.gauge("tailscale.peer.last_handshake_age_seconds", age, tags=ptags)
 
-                  self.gauge("tailscale.peers.online", online_peers)
-                  self.gauge("tailscale.peers.direct", direct_peers)
-                  self.gauge("tailscale.peers.relayed", relayed_peers)
+                  self.gauge("tailscale.peers.online", online_peers, tags=base_tags)
+                  self.gauge("tailscale.peers.direct", direct_peers, tags=base_tags)
+                  self.gauge("tailscale.peers.relayed", relayed_peers, tags=base_tags)
 
                   health = status.get("Health") or []
-                  self.gauge("tailscale.health.issues", len(health))
+                  self.gauge("tailscale.health.issues", len(health), tags=base_tags)
 
                   # Some health messages are benign for a subnet router (e.g. it
                   # advertises routes but does not accept others') and must not
@@ -111,15 +114,18 @@ write_files:
                   # (non-benign) health issues degrade to WARNING; otherwise OK.
                   if not online:
                       self.service_check("tailscale.up", AgentCheck.CRITICAL,
+                                         tags=base_tags,
                                          message="tailscaled reports node offline")
                   elif real_issues:
                       self.service_check("tailscale.up", AgentCheck.WARNING,
+                                         tags=base_tags,
                                          message="; ".join(real_issues))
                   else:
-                      self.service_check("tailscale.up", AgentCheck.OK)
+                      self.service_check("tailscale.up", AgentCheck.OK, tags=base_tags)
               except Exception as e:
-                  self.service_check("tailscale.up", AgentCheck.CRITICAL, message=str(e))
-                  self.gauge("tailscale.self.online", 0)
+                  self.service_check("tailscale.up", AgentCheck.CRITICAL,
+                                     tags=base_tags, message=str(e))
+                  self.gauge("tailscale.self.online", 0, tags=base_tags)
   - path: /etc/datadog-agent/conf.d/tailscale.d/conf.yaml
     permissions: '0644'
     content: |
