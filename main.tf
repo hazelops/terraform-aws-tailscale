@@ -38,7 +38,7 @@ resource "aws_launch_template" "this" {
   user_data = base64encode(templatefile("${path.module}/templates/ec2_user_data.tpl.yml", {
     oauth_client_secret = var.tailscale_oauth_client_secret
     advertise_routes    = join(",", var.allowed_cidr_blocks)
-    advertise_tags      = join(",", concat(["tag:${var.env}"], var.tailscale_tags))
+    advertise_tags      = join(",", distinct(concat(["tag:${var.env}"], var.tailscale_tags)))
     hostname            = local.name
     datadog_enabled     = var.datadog_enabled
     datadog_api_key     = var.datadog_api_key
