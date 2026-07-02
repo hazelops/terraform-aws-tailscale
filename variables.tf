@@ -50,6 +50,10 @@ variable "ext_security_groups" {
 variable "allowed_cidr_blocks" {
   type        = list(string)
   description = "List of network subnets that are allowed. According to PCI-DSS, CIS AWS and SOC2 providing a default wide-open CIDR is not secure."
+  validation {
+    condition     = length(var.allowed_cidr_blocks) > 0
+    error_message = "allowed_cidr_blocks must contain at least one CIDR block."
+  }
 }
 
 variable "ssm_role_arn" {
@@ -59,7 +63,10 @@ variable "ssm_role_arn" {
 }
 
 variable "asg" {
-  type = map(any)
+  type = object({
+    min_size = number
+    max_size = number
+  })
   default = {
     min_size = 1
     max_size = 1
@@ -73,39 +80,10 @@ variable "monitoring_enabled" {
   description = "Whether to enable monitoring for the Auto Scaling Group"
 }
 
-variable "tailscale_oauth_client_id" {
-  type        = string
-  description = "Tailscale OAuth client ID"
-}
-
 variable "tailscale_oauth_client_secret" {
   type        = string
   sensitive   = true
   description = "Tailscale OAuth client secret"
-}
-
-variable "key_expiry" {
-  type        = number
-  default     = 7776000
-  description = "Expiry of the key in seconds. Defaults to 7776000 (90 days)"
-}
-
-variable "key_reusable" {
-  type        = bool
-  default     = true
-  description = "Indicates whether the key is reusable"
-}
-
-variable "key_ephemeral" {
-  type        = bool
-  default     = true
-  description = "Indicates whether the key is ephemeral"
-}
-
-variable "key_preauthorized" {
-  type        = bool
-  default     = true
-  description = "Determines whether or not the machines authenticated by the key will be authorized for the Tailnet by default"
 }
 
 variable "tailscale_tags" {

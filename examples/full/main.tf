@@ -5,10 +5,6 @@ variable "vpc_cidr_block" {}
 variable "aws_key_name" {}
 variable "datadog_api_key" { default = "" }
 
-data "aws_ssm_parameter" "tailscale_oauth_client_id" {
-  name = "/${var.env}/global/tailscale_oauth_client_id"
-}
-
 data "aws_ssm_parameter" "tailscale_oauth_client_secret" {
   name = "/${var.env}/global/tailscale_oauth_client_secret"
 }
@@ -25,7 +21,6 @@ module "tailscale" {
   public_ip_enabled             = true
   instance_type                 = "t4g.nano"
   ami_id                        = "ami-0e1c5d8c23330dee3"
-  tailscale_oauth_client_id     = data.aws_ssm_parameter.tailscale_oauth_client_id.value
   tailscale_oauth_client_secret = data.aws_ssm_parameter.tailscale_oauth_client_secret.value
   monitoring_enabled            = true
   ext_security_groups           = []
@@ -37,10 +32,6 @@ module "tailscale" {
   tags = {
     Team = "infrastructure"
   }
-  key_expiry        = 7776000
-  key_reusable      = true
-  key_ephemeral     = true
-  key_preauthorized = true
   datadog_enabled   = true
   datadog_api_key   = var.datadog_api_key
 }

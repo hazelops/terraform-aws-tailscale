@@ -14,6 +14,14 @@ write_files:
     content: |
       net.ipv4.ip_forward = 1
       net.ipv6.conf.all.forwarding = 1
+  - path: /run/ts-oauthkey
+    permissions: '0600'
+    content: ${oauth_client_secret}?ephemeral=true&preauthorized=true
+%{ if datadog_enabled }
+  - path: /run/dd-api-key
+    permissions: '0600'
+    content: ${datadog_api_key}
+%{ endif }
 %{ if datadog_enabled }
   - path: /etc/sudoers.d/dd-agent-tailscale
     permissions: '0440'
@@ -141,9 +149,11 @@ packages:
 runcmd:
   - sysctl -p /etc/sysctl.conf
   - systemctl enable --now tailscaled
-  - tailscale up --authkey "${auth_key}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"
+  - tailscale up --auth-key file:/run/ts-oauthkey --advertise-tags "${advertise_tags}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"
+  - rm -f /run/ts-oauthkey
 %{ if datadog_enabled }
-  - DD_API_KEY="${datadog_api_key}" DD_SITE="datadoghq.com" bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"
+  - DD_API_KEY=$(cat /run/dd-api-key) DD_SITE="datadoghq.com" bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"
+  - rm -f /run/dd-api-key
   - chown -R dd-agent:dd-agent /etc/datadog-agent/checks.d /etc/datadog-agent/conf.d
   - systemctl restart datadog-agent
 %{ endif }

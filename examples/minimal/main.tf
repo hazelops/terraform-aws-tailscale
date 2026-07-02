@@ -4,10 +4,6 @@ variable "subnets" {}
 variable "vpc_cidr_block" {}
 variable "aws_key_name" {}
 
-data "aws_ssm_parameter" "tailscale_oauth_client_id" {
-  name = "/${var.env}/global/tailscale_oauth_client_id"
-}
-
 data "aws_ssm_parameter" "tailscale_oauth_client_secret" {
   name = "/${var.env}/global/tailscale_oauth_client_secret"
 }
@@ -20,6 +16,5 @@ module "tailscale" {
   env                           = var.env
   subnets                       = var.subnets
   vpc_id                        = var.vpc_id
-  tailscale_oauth_client_id     = data.aws_ssm_parameter.tailscale_oauth_client_id.value
   tailscale_oauth_client_secret = data.aws_ssm_parameter.tailscale_oauth_client_secret.value
 }

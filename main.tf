@@ -5,13 +5,15 @@ resource "aws_autoscaling_group" "this" {
   min_size            = var.asg["min_size"]
   max_size            = var.asg["max_size"]
   launch_template {
-    id = aws_launch_template.this.id
+    id      = aws_launch_template.this.id
+    version = aws_launch_template.this.latest_version
   }
 
   instance_refresh {
     strategy = "Rolling"
     preferences {
-      min_healthy_percentage = 50
+      min_healthy_percentage = var.asg["min_size"] > 1 ? 50 : 0
+      max_healthy_percentage = var.asg["min_size"] > 1 ? 150 : 200
     }
   }
 
@@ -21,9 +23,6 @@ resource "aws_autoscaling_group" "this" {
     propagate_at_launch = true
   }
 
-  lifecycle {
-    replace_triggered_by = [aws_launch_template.this]
-  }
 }
 
 # Tailscale launch template
@@ -37,14 +36,20 @@ resource "aws_launch_template" "this" {
   instance_type                        = var.instance_type
   key_name                             = var.ec2_key_pair_name
   user_data = base64encode(templatefile("${path.module}/templates/ec2_user_data.tpl.yml", {
-    auth_key         = tailscale_tailnet_key.this.key
-    advertise_routes = join(",", var.allowed_cidr_blocks)
-    hostname         = local.name
-    datadog_enabled  = var.datadog_enabled
-    datadog_api_key  = var.datadog_api_key
-    env              = var.env
+    oauth_client_secret = var.tailscale_oauth_client_secret
+    advertise_routes    = join(",", var.allowed_cidr_blocks)
+    advertise_tags      = join(",", concat(["tag:${var.env}"], var.tailscale_tags))
+    hostname            = local.name
+    datadog_enabled     = var.datadog_enabled
+    datadog_api_key     = var.datadog_api_key
+    env                 = var.env
   }))
   update_default_version = true
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
   monitoring {
     enabled = var.monitoring_enabled
   }
@@ -57,6 +62,13 @@ resource "aws_launch_template" "this" {
     TailScale = "true"
   }, var.tags)
 
+  lifecycle {
+    precondition {
+      condition     = !var.datadog_enabled || var.datadog_api_key != ""
+      error_message = "datadog_api_key is required when datadog_enabled is true."
+    }
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags = merge({
@@ -64,13 +76,4 @@ resource "aws_launch_template" "this" {
       TailScale = "true"
     }, var.tags)
   }
-}
-
-# Tailscale key
-resource "tailscale_tailnet_key" "this" {
-  reusable      = var.key_reusable
-  ephemeral     = var.key_ephemeral
-  preauthorized = var.key_preauthorized
-  expiry        = var.key_expiry
-  tags          = concat(["tag:${var.env}"], var.tailscale_tags)
 }
