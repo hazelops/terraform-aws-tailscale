@@ -14,7 +14,7 @@ variable "ec2_key_pair_name" {
 
 variable "subnets" {
   type        = list(string)
-  description = "Subnets where the Taiscale instance will be placed. It is recommended to use a private subnet for better security."
+  description = "Subnets where the Tailscale instance will be placed. It is recommended to use a private subnet for better security."
 }
 
 variable "ami_id" {
@@ -38,7 +38,7 @@ variable "instance_type" {
 variable "public_ip_enabled" {
   type        = bool
   default     = false
-  description = "Wheter to enable a public IP for Tailscale instance"
+  description = "Whether to enable a public IP for Tailscale instance"
 }
 
 variable "ext_security_groups" {
@@ -50,16 +50,23 @@ variable "ext_security_groups" {
 variable "allowed_cidr_blocks" {
   type        = list(string)
   description = "List of network subnets that are allowed. According to PCI-DSS, CIS AWS and SOC2 providing a default wide-open CIDR is not secure."
+  validation {
+    condition     = length(var.allowed_cidr_blocks) > 0
+    error_message = "allowed_cidr_blocks must contain at least one CIDR block."
+  }
 }
 
 variable "ssm_role_arn" {
   type        = string
-  default     = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-  description = "SSM role to attach to a Tailscale instance"
+  default     = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  description = "SSM policy ARN to attach to the Tailscale instance IAM role"
 }
 
 variable "asg" {
-  type = map(any)
+  type = object({
+    min_size = number
+    max_size = number
+  })
   default = {
     min_size = 1
     max_size = 1
@@ -73,33 +80,10 @@ variable "monitoring_enabled" {
   description = "Whether to enable monitoring for the Auto Scaling Group"
 }
 
-variable "api_token" {
+variable "tailscale_oauth_client_secret" {
   type        = string
-  description = "Tailscale API access token"
-}
-
-variable "key_expiry" {
-  type        = number
-  default     = 7776000
-  description = "Expiry of the key in seconds. Defaults to 7776000 (90 days)"
-}
-
-variable "key_reusable" {
-  type        = bool
-  default     = true
-  description = "Indicates whether the key is reusable"
-}
-
-variable "key_ephemeral" {
-  type        = bool
-  default     = true
-  description = "Indicates whether the key is ephemeral"
-}
-
-variable "key_preauthorized" {
-  type        = bool
-  default     = true
-  description = "Determines whether or not the machines authenticated by the key will be authorized for the Tailnet by default"
+  sensitive   = true
+  description = "Tailscale OAuth client secret"
 }
 
 variable "tailscale_tags" {
@@ -109,7 +93,20 @@ variable "tailscale_tags" {
 }
 
 variable "tags" {
-    type        = map(string)
-    default     = {}
-    description = "AWS tags for the Tailscale instance"
+  type        = map(string)
+  default     = {}
+  description = "AWS tags for the Tailscale instance"
+}
+
+variable "datadog_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether to enable Datadog Agent monitoring on the Tailscale instance"
+}
+
+variable "datadog_api_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Datadog API key (required if datadog_enabled is true)"
 }

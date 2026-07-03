@@ -1,21 +1,159 @@
 #cloud-config
 hostname: ${hostname}
-yum_repos:
-  tailscale-stable:
-    name: tailscale-stable
-    enabled: true
-    repo_gpgcheck: true
-    gpgcheck: false
-    baseurl: https://pkgs.tailscale.com/stable/amazon-linux/2/$basearch
-    gpgkey: https://pkgs.tailscale.com/stable/amazon-linux/2/repo.gpg
-packages:
-  - tailscale
 write_files:
+  - path: /etc/yum.repos.d/tailscale.repo
+    content: |
+      [tailscale-stable]
+      name=Tailscale stable
+      baseurl=https://pkgs.tailscale.com/stable/amazon-linux/2023/$basearch
+      enabled=1
+      repo_gpgcheck=1
+      gpgcheck=0
+      gpgkey=https://pkgs.tailscale.com/stable/amazon-linux/2023/repo.gpg
   - path: /etc/sysctl.conf
     content: |
       net.ipv4.ip_forward = 1
       net.ipv6.conf.all.forwarding = 1
+  - path: /run/ts-oauthkey
+    permissions: '0600'
+    content: ${oauth_client_secret}?ephemeral=true&preauthorized=true
+%{ if datadog_enabled }
+  - path: /run/dd-api-key
+    permissions: '0600'
+    content: ${datadog_api_key}
+%{ endif }
+%{ if datadog_enabled }
+  - path: /etc/sudoers.d/dd-agent-tailscale
+    permissions: '0440'
+    content: |
+      dd-agent ALL=(root) NOPASSWD: /usr/bin/tailscale status --json
+  - path: /etc/datadog-agent/checks.d/tailscale.py
+    permissions: '0644'
+    content: |
+      import json
+      import subprocess
+      from datetime import datetime, timezone
+      from datadog_checks.base import AgentCheck
+
+
+      def _age_seconds(ts):
+          # Age of the last handshake in seconds; None if there was never one.
+          if not ts or ts.startswith("0001"):
+              return None
+          s = ts.rstrip("Z")
+          if "." in s:
+              head, frac = s.split(".", 1)
+              s = head + "." + frac[:6]
+              fmt = "%Y-%m-%dT%H:%M:%S.%f"
+          else:
+              fmt = "%Y-%m-%dT%H:%M:%S"
+          try:
+              dt = datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+          except ValueError:
+              return None
+          return (datetime.now(timezone.utc) - dt).total_seconds()
+
+
+      class TailscaleCheck(AgentCheck):
+          def check(self, instance):
+              # Instance-level tags from conf.yaml are NOT auto-applied to custom
+              # checks, so read them here and attach to every metric / service check.
+              base_tags = list(instance.get("tags", []))
+              try:
+                  result = subprocess.run(
+                      ["sudo", "/usr/bin/tailscale", "status", "--json"],
+                      capture_output=True, text=True, timeout=10
+                  )
+                  status = json.loads(result.stdout)
+
+                  self_node = status.get("Self", {}) or {}
+                  online = 1 if self_node.get("Online", False) else 0
+                  self.gauge("tailscale.self.online", online, tags=base_tags)
+
+                  # Subnets this node serves as primary (approved and active).
+                  # In HA: 1 on the active node, 0 on the standby.
+                  primary_routes = self_node.get("PrimaryRoutes") or []
+                  self.gauge("tailscale.routes.primary_count", len(primary_routes), tags=base_tags)
+
+                  peers = status.get("Peer", {}) or {}
+                  self.gauge("tailscale.peers.count", len(peers), tags=base_tags)
+
+                  online_peers = 0
+                  direct_peers = 0
+                  relayed_peers = 0
+                  for pkey, p in peers.items():
+                      host = p.get("HostName") or p.get("DNSName") or pkey[:12]
+                      ptags = base_tags + ["peer:" + host]
+
+                      p_online = 1 if p.get("Online") else 0
+                      online_peers += p_online
+                      self.gauge("tailscale.peer.online", p_online, tags=ptags)
+                      self.gauge("tailscale.peer.rx_bytes", p.get("RxBytes", 0), tags=ptags)
+                      self.gauge("tailscale.peer.tx_bytes", p.get("TxBytes", 0), tags=ptags)
+
+                      # Relay == "" -> direct connection, otherwise traffic goes via a DERP relay.
+                      is_direct = 1 if p.get("Relay", "") == "" else 0
+                      self.gauge("tailscale.peer.direct", is_direct, tags=ptags)
+                      if p_online:
+                          if is_direct:
+                              direct_peers += 1
+                          else:
+                              relayed_peers += 1
+
+                      age = _age_seconds(p.get("LastHandshake"))
+                      if age is not None:
+                          self.gauge("tailscale.peer.last_handshake_age_seconds", age, tags=ptags)
+
+                  self.gauge("tailscale.peers.online", online_peers, tags=base_tags)
+                  self.gauge("tailscale.peers.direct", direct_peers, tags=base_tags)
+                  self.gauge("tailscale.peers.relayed", relayed_peers, tags=base_tags)
+
+                  health = status.get("Health") or []
+                  self.gauge("tailscale.health.issues", len(health), tags=base_tags)
+
+                  # Some health messages are benign for a subnet router (e.g. it
+                  # advertises routes but does not accept others') and must not
+                  # raise a false alert.
+                  benign = ("--accept-routes is false",)
+                  real_issues = [h for h in health
+                                 if not any(b in h for b in benign)]
+
+                  # CRITICAL only when the node is actually offline. Real
+                  # (non-benign) health issues degrade to WARNING; otherwise OK.
+                  if not online:
+                      self.service_check("tailscale.up", AgentCheck.CRITICAL,
+                                         tags=base_tags,
+                                         message="tailscaled reports node offline")
+                  elif real_issues:
+                      self.service_check("tailscale.up", AgentCheck.WARNING,
+                                         tags=base_tags,
+                                         message="; ".join(real_issues))
+                  else:
+                      self.service_check("tailscale.up", AgentCheck.OK, tags=base_tags)
+              except Exception as e:
+                  self.service_check("tailscale.up", AgentCheck.CRITICAL,
+                                     tags=base_tags, message=str(e))
+                  self.gauge("tailscale.self.online", 0, tags=base_tags)
+  - path: /etc/datadog-agent/conf.d/tailscale.d/conf.yaml
+    permissions: '0644'
+    content: |
+      init_config:
+      instances:
+        - min_collection_interval: 30
+          tags:
+            - env:${env}
+            - service:tailscale-router
+%{ endif }
+packages:
+  - tailscale
 runcmd:
   - sysctl -p /etc/sysctl.conf
   - systemctl enable --now tailscaled
-  - tailscale up --authkey "${auth_key}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"
+  - tailscale up --auth-key file:/run/ts-oauthkey --advertise-tags "${advertise_tags}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"
+  - rm -f /run/ts-oauthkey
+%{ if datadog_enabled }
+  - DD_API_KEY=$(cat /run/dd-api-key) DD_SITE="datadoghq.com" bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"
+  - rm -f /run/dd-api-key
+  - chown -R dd-agent:dd-agent /etc/datadog-agent/checks.d /etc/datadog-agent/conf.d
+  - systemctl restart datadog-agent
+%{ endif }

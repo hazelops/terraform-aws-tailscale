@@ -1,5 +1,5 @@
 output "security_group_id" {
-  value = element(aws_security_group.this.*.id, 0)
+  value = aws_security_group.this.id
 }
 
 output "autoscaling_group_id" {
