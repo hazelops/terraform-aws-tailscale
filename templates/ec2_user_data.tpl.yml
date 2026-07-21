@@ -150,7 +150,7 @@ runcmd:
   - sysctl -p /etc/sysctl.conf
   - systemctl enable --now tailscaled
   - dnf install -y --allowerasing curl
-  - TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600") && curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id | tail -c 4 > /run/instance-id-suffix
+  - 'TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600") && curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id | tail -c 4 > /run/instance-id-suffix'
   - tailscale up --auth-key file:/run/ts-oauthkey --advertise-tags "${advertise_tags}" --advertise-routes "${advertise_routes}" --hostname "${hostname}-$(cat /run/instance-id-suffix)"%{ if exit_node_enabled } --advertise-exit-node%{ endif }
   - rm -f /run/ts-oauthkey /run/instance-id-suffix
 %{ if datadog_enabled }
