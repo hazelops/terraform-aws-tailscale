@@ -113,6 +113,16 @@ module "tailscale" {
 
 Exit nodes must be approved in the Tailscale Admin Console (or via `autoApprovers.exitNode` in the ACL) before tailnet clients can select them.
 
+⚠️ **Configure `autoApprovers.exitNode` before setting `exit_node_enabled = true`.** Just like `autoApprovers.routes` (see [step 1](#1-configure-the-acl)), this is not retroactive — it only applies to exit node advertisements Tailscale receives *after* it's configured. If the instance advertises itself as an exit node first, it stays pending even after the ACL is updated; toggling `exit_node_enabled` off and back on (or `tailscale down`/`up` on the instance) re-sends the advertisement so it can be auto-approved. Add this to the same policy file from step 1:
+
+```json
+{
+  "autoApprovers": {
+    "exitNode": ["tag:<environment>"]
+  }
+}
+```
+
 ## Datadog Monitoring (Optional)
 
 Enable Datadog Agent with a custom Tailscale health check:
