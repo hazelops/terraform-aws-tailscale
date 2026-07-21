@@ -149,7 +149,7 @@ packages:
 runcmd:
   - sysctl -p /etc/sysctl.conf
   - systemctl enable --now tailscaled
-  - tailscale up --auth-key file:/run/ts-oauthkey --advertise-tags "${advertise_tags}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"
+  - tailscale up --auth-key file:/run/ts-oauthkey --advertise-tags "${advertise_tags}" --advertise-routes "${advertise_routes}" --hostname "${hostname}"%{ if exit_node_enabled } --advertise-exit-node%{ endif }
   - rm -f /run/ts-oauthkey
 %{ if datadog_enabled }
   - DD_API_KEY=$(cat /run/dd-api-key) DD_SITE="datadoghq.com" bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"

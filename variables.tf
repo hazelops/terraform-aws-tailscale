@@ -19,7 +19,7 @@ variable "subnets" {
 
 variable "ami_id" {
   type        = string
-  description = "Optional AMI ID for Tailscale instance. Otherwise latest Amazon Linux will be used. One might want to lock this down to avoid unexpected upgrades."
+  description = "Optional AMI ID for Tailscale instance. Otherwise the latest Amazon Linux 2023 AMI will be used. One might want to lock this down to avoid unexpected upgrades. Must be an Amazon Linux 2023 (or AL2023-derived) AMI: the module's cloud-init content assumes a yum/dnf-based OS, and root-volume encryption (see ebs_encrypted) assumes a /dev/xvda root device."
   default     = ""
 }
 
@@ -74,6 +74,12 @@ variable "asg" {
   description = "Scaling settings of an Auto Scaling Group"
 }
 
+variable "ebs_encrypted" {
+  type        = bool
+  default     = true
+  description = "Whether to encrypt the root EBS volume using the AWS-managed EBS key (alias/aws/ebs)"
+}
+
 variable "monitoring_enabled" {
   type        = bool
   default     = true
@@ -90,6 +96,12 @@ variable "tailscale_tags" {
   type        = list(string)
   default     = []
   description = "List of Tailscale tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key"
+}
+
+variable "exit_node_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether to advertise this instance as a Tailscale exit node (--advertise-exit-node), allowing tailnet traffic to be routed through it"
 }
 
 variable "tags" {

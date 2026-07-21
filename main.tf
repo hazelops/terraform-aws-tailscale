@@ -12,7 +12,7 @@ resource "aws_autoscaling_group" "this" {
   instance_refresh {
     strategy = "Rolling"
     preferences {
-      min_healthy_percentage = var.asg["min_size"] > 1 ? 50 : 0
+      min_healthy_percentage = var.asg["min_size"] > 1 ? 50 : 100
       max_healthy_percentage = var.asg["min_size"] > 1 ? 150 : 200
     }
   }
@@ -31,6 +31,13 @@ resource "aws_launch_template" "this" {
   iam_instance_profile {
     name = aws_iam_instance_profile.this.name
   }
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      encrypted             = var.ebs_encrypted
+      delete_on_termination = true
+    }
+  }
   image_id                             = var.ami_id != "" ? var.ami_id : join("", data.aws_ami.this.*.id)
   instance_initiated_shutdown_behavior = "terminate"
   instance_type                        = var.instance_type
@@ -43,6 +50,7 @@ resource "aws_launch_template" "this" {
     datadog_enabled     = var.datadog_enabled
     datadog_api_key     = var.datadog_api_key
     env                 = var.env
+    exit_node_enabled   = var.exit_node_enabled
   }))
   update_default_version = true
   metadata_options {
