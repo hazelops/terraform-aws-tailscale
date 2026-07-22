@@ -31,8 +31,8 @@ variable "name" {
 
 variable "instance_type" {
   type        = string
-  default     = "t4g.nano"
-  description = "Type of Tailscale instance"
+  default     = "t4g.micro"
+  description = "Type of Tailscale instance. Defaults to t4g.micro (1 GiB RAM) rather than t4g.nano (0.5 GiB): dnf install tailscale pulls in iptables-nft, libnetfilter_conntrack, and related dependencies, and on t4g.nano this can exceed available memory (RAM + swap) during first boot and get killed by the OOM killer, silently leaving the instance without tailscale installed (cloud-init does not retry). t4g.micro has enough headroom to avoid this reliably."
 }
 
 variable "public_ip_enabled" {
