@@ -11,7 +11,7 @@ data "aws_ssm_parameter" "tailscale_oauth_client_secret" {
 
 module "tailscale" {
   source                        = "registry.terraform.io/hazelops/tailscale/aws"
-  version                       = "~> 3.0"
+  version                       = "~> 3.1"
   name                          = "tailscale-router"
   allowed_cidr_blocks           = [var.vpc_cidr_block]
   ec2_key_pair_name             = var.aws_key_name
@@ -19,7 +19,6 @@ module "tailscale" {
   subnets                       = var.subnets
   vpc_id                        = var.vpc_id
   public_ip_enabled             = true
-  instance_type                 = "t4g.nano"
   ami_id                        = "ami-0e1c5d8c23330dee3"
   tailscale_oauth_client_secret = data.aws_ssm_parameter.tailscale_oauth_client_secret.value
   monitoring_enabled            = true

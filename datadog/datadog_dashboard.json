@@ -1,0 +1,133 @@
+{
+  "title": "Tailscale Router",
+  "description": "Health and connectivity metrics for Tailscale subnet routers deployed via terraform-aws-tailscale.",
+  "widgets": [
+    {
+      "id": 1,
+      "definition": {
+        "type": "check_status",
+        "title": "tailscale.up",
+        "title_size": "16",
+        "title_align": "center",
+        "check": "tailscale.up",
+        "grouping": "cluster",
+        "group_by": ["env"],
+        "tags": ["$env"]
+      },
+      "layout": { "x": 0, "y": 0, "width": 4, "height": 3 }
+    },
+    {
+      "id": 2,
+      "definition": {
+        "type": "query_value",
+        "title": "Primary Routes",
+        "requests": [
+          {
+            "q": "sum:tailscale.routes.primary_count{$env}",
+            "aggregator": "last",
+            "conditional_formats": [
+              { "comparator": ">=", "value": 1, "palette": "green_on_white" },
+              { "comparator": "<",  "value": 1, "palette": "yellow_on_white" }
+            ]
+          }
+        ],
+        "precision": 0,
+        "autoscale": false
+      },
+      "layout": { "x": 4, "y": 0, "width": 4, "height": 3 }
+    },
+    {
+      "id": 3,
+      "definition": {
+        "type": "query_value",
+        "title": "Health Issues",
+        "requests": [
+          {
+            "q": "sum:tailscale.health.issues{$env}",
+            "aggregator": "last",
+            "conditional_formats": [
+              { "comparator": "<=", "value": 0, "palette": "green_on_white" },
+              { "comparator": ">",  "value": 0, "palette": "yellow_on_white" }
+            ]
+          }
+        ],
+        "precision": 0,
+        "autoscale": false
+      },
+      "layout": { "x": 8, "y": 0, "width": 4, "height": 3 }
+    },
+    {
+      "id": 4,
+      "definition": {
+        "type": "timeseries",
+        "title": "Peers Online / Direct / Relayed",
+        "requests": [
+          {
+            "q": "avg:tailscale.peers.online{$env}",
+            "display_type": "line"
+          },
+          {
+            "q": "avg:tailscale.peers.direct{$env}",
+            "display_type": "line"
+          },
+          {
+            "q": "avg:tailscale.peers.relayed{$env}",
+            "display_type": "line"
+          }
+        ]
+      },
+      "layout": { "x": 0, "y": 3, "width": 4, "height": 4 }
+    },
+    {
+      "id": 5,
+      "definition": {
+        "type": "timeseries",
+        "title": "RX/TX Bytes by Peer",
+        "requests": [
+          {
+            "q": "avg:tailscale.peer.rx_bytes{$env} by {peer}",
+            "display_type": "line",
+            "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+          },
+          {
+            "q": "avg:tailscale.peer.tx_bytes{$env} by {peer}",
+            "display_type": "line",
+            "style": { "palette": "warm", "line_type": "solid", "line_width": "normal" }
+          }
+        ],
+        "yaxis": { "label": "bytes", "scale": "linear", "include_zero": true }
+      },
+      "layout": { "x": 4, "y": 3, "width": 4, "height": 4 }
+    },
+    {
+      "id": 6,
+      "definition": {
+        "type": "timeseries",
+        "title": "Last Handshake Age by Peer (seconds)",
+        "requests": [
+          {
+            "q": "avg:tailscale.peer.last_handshake_age_seconds{$env} by {peer}",
+            "display_type": "line",
+            "style": { "palette": "warm", "line_type": "solid", "line_width": "normal" }
+          }
+        ],
+        "yaxis": { "label": "seconds", "scale": "linear", "include_zero": true },
+        "markers": [
+          { "value": "y = 180", "display_type": "warning dashed", "label": "3 min" }
+        ]
+      },
+      "layout": { "x": 8, "y": 3, "width": 4, "height": 4 }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "available_values": [],
+      "default": "*"
+    }
+  ],
+  "layout_type": "free",
+  "notify_list": [],
+  "reflow_type": "fixed"
+}
