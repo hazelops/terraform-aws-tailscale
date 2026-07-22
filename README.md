@@ -90,9 +90,15 @@ module "tailscale" {
 
 More examples can be found in the [examples directory](./examples).
 
+## Instance Sizing
+
+The default `instance_type` is `t4g.micro` (1 GiB RAM) — don't go below this. Installing `tailscale` also pulls in `iptables` and its supporting libraries, and on `t4g.nano` (0.5 GiB RAM) this can exceed available memory on first boot and get killed by the OOM killer, silently leaving the instance without `tailscale` installed (cloud-init does not retry a failed module).
+
 ## High Availability
 
 Running two instances (e.g. `asg = { min_size = 2, max_size = 2 }`) in subnets across two Availability Zones provides automatic failover. Both instances advertise the same routes, and Tailscale handles failover transparently with ~15 seconds of downtime.
+
+Each instance's Tailscale hostname includes a suffix from its EC2 instance ID (e.g. `prod-tailscale-router-a1b2`), so multiple concurrent instances are distinguishable in the Tailscale admin console instead of showing up with the same name.
 
 **Prerequisite:** `autoApprovers` must be configured in the Tailscale ACL (see [Configure the ACL](#1-configure-the-acl)). Without it, routes require manual approval and failover will not work automatically.
 
@@ -282,7 +288,7 @@ No modules.
 | <a name="input_env"></a> [env](#input\_env) | Environment name (typically dev/prod) | `string` | n/a | yes |
 | <a name="input_exit_node_enabled"></a> [exit\_node\_enabled](#input\_exit\_node\_enabled) | Whether to advertise this instance as a Tailscale exit node (--advertise-exit-node), allowing tailnet traffic to be routed through it | `bool` | `false` | no |
 | <a name="input_ext_security_groups"></a> [ext\_security\_groups](#input\_ext\_security\_groups) | External security groups to add to the Tailscale instance | `list(any)` | `[]` | no |
-| <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | Type of Tailscale instance | `string` | `"t4g.nano"` | no |
+| <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | Type of Tailscale instance. Defaults to t4g.micro (1 GiB RAM) rather than t4g.nano (0.5 GiB): dnf install tailscale pulls in iptables-nft, libnetfilter\_conntrack, and related dependencies, and on t4g.nano this can exceed available memory (RAM + swap) during first boot and get killed by the OOM killer, silently leaving the instance without tailscale installed (cloud-init does not retry). t4g.micro has enough headroom to avoid this reliably. | `string` | `"t4g.micro"` | no |
 | <a name="input_monitoring_enabled"></a> [monitoring\_enabled](#input\_monitoring\_enabled) | Whether to enable monitoring for the Auto Scaling Group | `bool` | `true` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name for Tailscale instance | `string` | `"tailscale-router"` | no |
 | <a name="input_public_ip_enabled"></a> [public\_ip\_enabled](#input\_public\_ip\_enabled) | Whether to enable a public IP for Tailscale instance | `bool` | `false` | no |
