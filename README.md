@@ -242,6 +242,14 @@ module "tailscale" {
 }
 ```
 
+## Datadog Dashboard
+
+A ready-made dashboard definition is available at [`datadog/datadog_dashboard.json`](./datadog/datadog_dashboard.json), covering the metrics emitted when `datadog_enabled = true`: `tailscale.up` status, primary route ownership, health issues, peer connectivity, traffic by peer, and last handshake age.
+
+To use it, click **+ New Dashboard** in the Datadog UI, then open the settings (gear icon) menu on the new dashboard and select **Import dashboard JSON** to paste or upload the file — or create it via the [Dashboards API](https://docs.datadoghq.com/api/latest/dashboards/).
+
+![Tailscale Router Datadog dashboard](./docs/images/datadog_dashboard.png)
+
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

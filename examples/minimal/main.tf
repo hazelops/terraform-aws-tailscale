@@ -10,7 +10,7 @@ data "aws_ssm_parameter" "tailscale_oauth_client_secret" {
 
 module "tailscale" {
   source                        = "registry.terraform.io/hazelops/tailscale/aws"
-  version                       = "~> 3.0"
+  version                       = "~> 3.1"
   allowed_cidr_blocks           = [var.vpc_cidr_block]
   ec2_key_pair_name             = var.aws_key_name
   env                           = var.env
