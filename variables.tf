@@ -19,7 +19,7 @@ variable "subnets" {
 
 variable "ami_id" {
   type        = string
-  description = "Optional AMI ID for Tailscale instance. Otherwise latest Amazon Linux will be used. One might want to lock this down to avoid unexpected upgrades."
+  description = "Optional AMI ID for Tailscale instance. Otherwise the latest Amazon Linux 2023 AMI will be used. One might want to lock this down to avoid unexpected upgrades. Must be an Amazon Linux 2023 (or AL2023-derived) AMI: the module's cloud-init content assumes a yum/dnf-based OS, and root-volume encryption (see ebs_encrypted) assumes a /dev/xvda root device."
   default     = ""
 }
 
@@ -31,8 +31,8 @@ variable "name" {
 
 variable "instance_type" {
   type        = string
-  default     = "t4g.nano"
-  description = "Type of Tailscale instance"
+  default     = "t4g.micro"
+  description = "Type of Tailscale instance. Defaults to t4g.micro (1 GiB RAM) rather than t4g.nano (0.5 GiB): dnf install tailscale pulls in iptables-nft, libnetfilter_conntrack, and related dependencies, and on t4g.nano this can exceed available memory (RAM + swap) during first boot and get killed by the OOM killer, silently leaving the instance without tailscale installed (cloud-init does not retry). t4g.micro has enough headroom to avoid this reliably."
 }
 
 variable "public_ip_enabled" {
@@ -74,6 +74,12 @@ variable "asg" {
   description = "Scaling settings of an Auto Scaling Group"
 }
 
+variable "ebs_encrypted" {
+  type        = bool
+  default     = true
+  description = "Whether to encrypt the root EBS volume using the AWS-managed EBS key (alias/aws/ebs)"
+}
+
 variable "monitoring_enabled" {
   type        = bool
   default     = true
@@ -90,6 +96,12 @@ variable "tailscale_tags" {
   type        = list(string)
   default     = []
   description = "List of Tailscale tags for the Tailnet device. It would be automatically tagged when it is authenticated with this key"
+}
+
+variable "exit_node_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether to advertise this instance as a Tailscale exit node (--advertise-exit-node), allowing tailnet traffic to be routed through it"
 }
 
 variable "tags" {
