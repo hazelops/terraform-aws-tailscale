@@ -35,15 +35,15 @@ Do this step **first**, before creating the OAuth client. Two things depend on i
 }
 ```
 
-3. Make sure the `acls` rules actually permit traffic to/from this tag, e.g.:
+3. Make sure the `grants` rules actually permit traffic to/from this tag, e.g.:
 
 ```json
 {
-  "acls": [
+  "grants": [
     {
-      "action": "accept",
       "src": ["*"],
-      "dst": ["*:*"]
+      "dst": ["*"],
+      "ip": ["*"]
     }
   ]
 }
@@ -108,17 +108,6 @@ Each instance's Tailscale hostname includes a suffix from its EC2 instance ID (e
 
 ## Exit Node
 
-Set `exit_node_enabled = true` to advertise this instance as a [Tailscale exit node](https://tailscale.com/kb/1103/exit-nodes), routing all tailnet traffic (not just the advertised subnet routes) through it:
-
-```terraform
-module "tailscale" {
-  # ... other variables ...
-  exit_node_enabled = true
-}
-```
-
-Exit nodes must be approved in the Tailscale Admin Console (or via `autoApprovers.exitNode` in the ACL) before tailnet clients can select them.
-
 ⚠️ **Configure `autoApprovers.exitNode` before setting `exit_node_enabled = true`.** Just like `autoApprovers.routes` (see [step 1](#1-configure-the-acl)), this is not retroactive — it only applies to exit node advertisements Tailscale receives *after* it's configured. If the instance advertises itself as an exit node first, it stays pending even after the ACL is updated; toggling `exit_node_enabled` off and back on (or `tailscale down`/`up` on the instance) re-sends the advertisement so it can be auto-approved. Add this to the same policy file from step 1:
 
 ```json
@@ -128,6 +117,17 @@ Exit nodes must be approved in the Tailscale Admin Console (or via `autoApprover
   }
 }
 ```
+
+Set `exit_node_enabled = true` to advertise this instance as a [Tailscale exit node](https://tailscale.com/kb/1103/exit-nodes), routing all tailnet traffic (not just the advertised subnet routes) through it:
+
+```terraform
+module "tailscale" {
+  # ... other variables ...
+  exit_node_enabled = true
+}
+```
+
+Exit nodes must be approved before tailnet clients can select them. With `autoApprovers.exitNode` configured this happens automatically; if it isn't set up, approve the node manually in the Tailscale Admin Console.
 
 ## Datadog Monitoring (Optional)
 
